@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Millfield School</Authors>
+    <Product>SOCS API Feeds</Product>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Version>1.0.2</Version>
+    <Copyright>Millfield School</Copyright>
+    <Description>Opens XML Endpoints for SOCS</Description>
+  </PropertyGroup>
+
+</Project>
