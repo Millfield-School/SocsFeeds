@@ -16,8 +16,8 @@ namespace SocsFeeds
         {
             List<objects.Choices> sc = new List<Choices>();
             XmlDocument xmlDocument = new XmlDocument();
-            if(string.IsNullOrEmpty(Category))
-                xmlDocument.Load(SOCSURL+ $"&Term={term}&AcademicYear={AcademicYear}&Category=LIKE:{Category}");
+            if(!string.IsNullOrEmpty(Category))
+                xmlDocument.Load(SOCSURL+ $"&Term={term}&AcademicYear={AcademicYear}&Category LIKE:{Category}");
             else
                 xmlDocument.Load(SOCSURL+$"&Term={term}&AcademicYear={AcademicYear}");
 
@@ -29,6 +29,9 @@ namespace SocsFeeds
                 c.Term = i["Term"].InnerText;
                 c.PupilID = i["PupilID"].InnerText;
                 c.AcademicYear = i["Year"].InnerText;
+                c.Gender = i["Gender"].InnerText;
+                c.DayTime = i["DayTime"].InnerText;
+                c.YearGroups = i["YearGroups"].InnerText;
                 sc.Add(c);
             }
 
