@@ -36,7 +36,7 @@ namespace SocsFeeds
                         c.ReturnTime = ii["returntime"].InnerText;
                     c.TeamName = ii["team"].InnerText;
                     c.Opposition = ii["opposition"].InnerText;
-                    c.Opposition = ii["oppositionteam"].InnerText;
+                    c.Oppositionteam = ii["oppositionteam"].InnerText;
                     if (ii["location"] != null)
                         c.Location = ii["location"].InnerText;
                     if (ii["transport"] != null)
