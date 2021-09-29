@@ -5,11 +5,12 @@ using System.Xml;
 
 namespace SocsFeeds
 {
-    public class MusicLessons
+    public class performingarts
     {
         private static string SOCSURL =
             "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + Config.SOCsSchoolID
-                                                               + "&key=" + Config.SOCsAPIKey + "&data=musiclessons";
+                                                                + "&key=" + Config.SOCsAPIKey + "&data=performingarts";
+
         public static List<objects.Tuition> GetLessons(DateTime LessonDate)
         {
 

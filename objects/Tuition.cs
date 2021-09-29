@@ -4,13 +4,13 @@ using System.Text;
 
 namespace SocsFeeds.objects
 {
-    public class MusicLessons
+    public class Tuition
     {
         public int LessonID { get; set; }
         public DateTime LessonStartDate { get; set; }
         public string LessonStartTime { get; set; }
         public string LessonEndTime { get; set; }
-        public string Instrument { get; set; }
+        public string LessonType { get; set; }
         public string LessonTitle { get; set; }
         public string Location { get; set; }
         public decimal LessonCostSchool { get; set; }

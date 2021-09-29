@@ -37,5 +37,6 @@ namespace SocsFeeds
                 APIKey = value;
             }
         }
+
     }
 }

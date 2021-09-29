@@ -9,17 +9,17 @@ namespace SocsFeeds
     public class StudentChoices
     {
         private static string SOCSURL =
-            "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID="+Config.SOCsSchoolID
-                                                               +"&key="+Config.SOCsAPIKey;
+            "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID=" + Config.SOCsSchoolID
+            + "&key=" + Config.SOCsAPIKey;
 
         public static List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category)
         {
             List<objects.Choices> sc = new List<Choices>();
             XmlDocument xmlDocument = new XmlDocument();
-            if(!string.IsNullOrEmpty(Category))
-                xmlDocument.Load(SOCSURL+ $"&Term={term}&AcademicYear={AcademicYear}&Category LIKE:{Category}");
+            if (!string.IsNullOrEmpty(Category))
+                xmlDocument.Load(SOCSURL + $"&Term={term}&AcademicYear={AcademicYear}&Category=LIKE:{Category}");
             else
-                xmlDocument.Load(SOCSURL+$"&Term={term}&AcademicYear={AcademicYear}");
+                xmlDocument.Load(SOCSURL + $"&Term={term}&AcademicYear={AcademicYear}");
 
             XmlNodeList clubnode = xmlDocument.SelectNodes("/ActivityClubParticipation/pupil");
             foreach (XmlNode i in clubnode)

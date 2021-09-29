@@ -4,10 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>Millfield School</Authors>
     <Product>SOCS API Feeds</Product>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <Version>1.0.5</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.14</Version>
     <Copyright>Millfield School</Copyright>
-    <Description>Opens XML Endpoints for SOCS</Description>
+    <Description>Unoffical SDK for SOCS</Description>
   </PropertyGroup>
 
 </Project>
