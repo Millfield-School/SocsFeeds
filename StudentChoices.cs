@@ -6,14 +6,13 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class StudentChoices
+    public class StudentChoices :IDisposable
     {
-        private static string SOCSURL =
-            "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID=" + Config.SOCsSchoolID
-            + "&key=" + Config.SOCsAPIKey;
+        
 
-        public static List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category)
+        public static List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category, int SchoolID, string APIKey)
         {
+            string SOCSURL = "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID=" + SchoolID + "&key=" + APIKey;
             List<objects.Choices> sc = new List<Choices>();
             XmlDocument xmlDocument = new XmlDocument();
             if (!string.IsNullOrEmpty(Category))
@@ -37,6 +36,11 @@ namespace SocsFeeds
 
             return sc;
 
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

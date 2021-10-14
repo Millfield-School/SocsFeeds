@@ -8,14 +8,15 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class Fixtures
+    public class Fixtures :IDisposable
     {
-        private static string SOCSURL =
-            "https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID=" + Config.SOCsSchoolID
-            + "&key=" + Config.SOCsAPIKey + "&TS=1";
 
-        public static async Task<List<objects.Fixtures>> GetFixtureDetails(DateTime StartDate, DateTime FinishDate)
+       
+        public List<objects.Fixtures> GetFixtureDetails(DateTime StartDate, DateTime FinishDate, int SchoolID, string APIKey)
         {
+            
+            
+            string SOCSURL = "https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID=" + SchoolID + "&key=" + APIKey + "&TS=1";
             List<objects.Fixtures> sc = new List<objects.Fixtures>();
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(SOCSURL + "&startdate=" + StartDate.ToLongDateString() + "&enddate=" + FinishDate.ToLongDateString());
@@ -67,6 +68,11 @@ namespace SocsFeeds
             }
 
             return sc;
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

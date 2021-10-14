@@ -8,16 +8,13 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class Events
+    public class Events :IDisposable
     {
-        string SOCSURL =
-           "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + Config.SOCsSchoolID
-                                                              + "&key=" + Config.SOCsAPIKey + "&data=";
-        public static async Task<List<objects.EventAttendance>> GetEventAttendance(DateTime EventDate)
+       
+        public  List<objects.EventAttendance> GetEventAttendance(DateTime EventDate, int SchoolID, string APIKey)
         {
-            string SOCSURL =
-                "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + Config.SOCsSchoolID
-                                                                        + "&key=" + Config.SOCsAPIKey + "&data=";
+            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
+           
             List<EventAttendance> att = new List<EventAttendance>();
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(SOCSURL + "registers&startdate=" + EventDate.ToLongDateString());
@@ -40,13 +37,10 @@ namespace SocsFeeds
             return att;
         }
 
-        public static async Task<List<objects.Events>> GetEventDetails(DateTime EventDate)
+        public List<objects.Events> GetEventDetails(DateTime EventDate, int SchoolID, string APIKey)
         {
-            string SOCSURL =
-                "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + Config.SOCsSchoolID
-                                                                        + "&key=" + Config.SOCsAPIKey + "&data=";
-            Console.WriteLine(Config.SOCsAPIKey);
-            Console.WriteLine(Config.SOCsSchoolID);
+            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
+           
             List<objects.Events> evn = new List<objects.Events>();
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(SOCSURL + "events&startdate=" + EventDate.ToLongDateString());
@@ -80,6 +74,11 @@ namespace SocsFeeds
             }
 
             return evn;
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

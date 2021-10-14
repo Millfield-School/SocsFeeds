@@ -5,15 +5,13 @@ using System.Xml;
 
 namespace SocsFeeds
 {
-    public class performingarts
+    public class performingarts :IDisposable
     {
-        private static string SOCSURL =
-            "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + Config.SOCsSchoolID
-                                                                + "&key=" + Config.SOCsAPIKey + "&data=performingarts";
+       
 
-        public static List<objects.Tuition> GetLessons(DateTime LessonDate)
+        public List<objects.Tuition> GetLessons(DateTime LessonDate, int SchoolID, string APIKey)
         {
-
+            string SOCSURL = "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=performingarts";
             List<objects.Tuition> ml = new List<objects.Tuition>();
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(SOCSURL + "&startdate=" + LessonDate.ToLongDateString());
@@ -59,6 +57,11 @@ namespace SocsFeeds
             }
 
             return ml;
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }
