@@ -10,7 +10,7 @@ namespace SocsFeeds
     {
         
 
-        public static List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category, int SchoolID, string APIKey)
+        public List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category, int SchoolID, string APIKey)
         {
             string SOCSURL = "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID=" + SchoolID + "&key=" + APIKey;
             List<objects.Choices> sc = new List<Choices>();
