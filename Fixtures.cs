@@ -20,7 +20,7 @@ namespace SocsFeeds
             List<objects.Fixtures> sc = new List<objects.Fixtures>();
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(SOCSURL + "&startdate=" + StartDate.ToLongDateString() + "&enddate=" + FinishDate.ToLongDateString());
-
+            string n = SOCSURL + "&startdate=" + StartDate.ToLongDateString() + "&enddate=" + FinishDate.ToLongDateString();
             XmlNodeList clubnode = xmlDocument.SelectNodes("fixtures");
             foreach (XmlNode i in clubnode)
             {
@@ -46,7 +46,8 @@ namespace SocsFeeds
                         c.Details = ii["details"].InnerText;
                     if (ii["url"] != null)
                         c.URL = ii["url"].InnerText;
-                    c.StartDateTimeFull = Convert.ToDateTime(ii["startdatefull"].InnerText);
+                    if (!string.IsNullOrEmpty(ii["startdatefull"].InnerText))
+                        c.StartDateTimeFull = Convert.ToDateTime(ii["startdatefull"].InnerText);
                     if (!string.IsNullOrEmpty(ii["enddatefull"].InnerText))
                         c.EndDateTimeFull = Convert.ToDateTime(ii["enddatefull"].InnerText);
                     if (ii["pupils"] != null)
