@@ -141,6 +141,72 @@ namespace SocsFeeds
             return att;
         }
 
+        public List<objects.ActivityAttendence> GetActivityAttendences(string AcademicTerm, string AcademicYear, string APIKey,int SchoolID, string Category)
+        {
+            string SOCSURL = $"https://cms.misocs.com/socs/xml/proactivityabsencereport.ashx?ID={SchoolID}&key={APIKey}&Term={AcademicTerm}&AcademicYear={AcademicYear}" ;
+            List<ActivityAttendence> att = new List<ActivityAttendence>();
+            XmlDocument xmlDocument = new XmlDocument();
+            if(!string.IsNullOrEmpty(Category))
+                xmlDocument.Load(SOCSURL+ $"&Category=LIKE:{Category}");
+            else
+                xmlDocument.Load(SOCSURL);
+
+            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("/PROactivityAbsenceReport");
+            foreach (XmlNode reg in xmlNodeList)
+            {
+                foreach (XmlNode p in reg.ChildNodes)
+                {
+                    ActivityAttendence temp = new ActivityAttendence();
+                    temp.txtSchoolID = p["PupilID"].InnerText;
+                    temp.ActivityDateTime = Convert.ToDateTime(p["Date"].InnerText);
+                    temp.ActivityName = p["Activity"].InnerText;
+                    temp.AcademicYear = p["Year"].InnerText;
+                    temp.AcademicTerm = p["Term"].InnerText;
+                    var rb = p["RecordedBy"];
+                    if (rb != null)
+                        temp.RecordedBy = p["RecordedBy"].InnerText;
+
+                    var tic = p["MasterInCharge"];
+                    if (tic != null)
+                        temp.tic = p["MasterInCharge"].InnerText;
+                    var ex = p["Excused"];
+                    if (ex != null)
+                    {
+                        string e = p["Excused"].InnerText;
+                        if (e == "1")
+                            temp.excused = true;
+                        else if (e == "0")
+                            temp.excused = false;
+                    }
+                    else
+                    {
+                        temp.excused = null;
+                    }
+
+                    var er = p["ExcusedReason"];
+                    if (er != null)
+                        temp.excusedReason = p["ExcusedReason"].InnerText;
+                    var eb = p["ExcusedBy"];
+                    if (eb != null)
+                        temp.excusedby = p["ExcusedBy"].InnerText;
+                    var lmd = p["ModifyDate"].InnerText;
+                    if (lmd != null)
+                    {
+                        string[] newdatetime = lmd.Split('/');
+                        string date = newdatetime[1] + "/" + newdatetime[0] + "/" + newdatetime[2];
+                        temp.LastModDate = Convert.ToDateTime(date);
+                    }
+
+                    var rep = p["ReportURL"].InnerText;
+                    if (rep != null)
+                        temp.ReportPath = p["ReportURL"].InnerText;
+
+                    att.Add(temp);
+                }
+            }
+
+            return att;
+        }
 
         public void Dispose()
         {
