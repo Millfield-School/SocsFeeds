@@ -43,8 +43,8 @@ namespace SocsFeeds
            
             List<objects.Events> evn = new List<objects.Events>();
             XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString());
-            Console.WriteLine(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString());
+            xmlDocument.Load(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString() + "&staff=1");
+            Console.WriteLine(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString() + "&staff=1");
             XmlNodeList xmlNodeList = xmlDocument.SelectNodes("events");
             foreach (XmlNode evt in xmlNodeList)
             {
@@ -68,6 +68,14 @@ namespace SocsFeeds
                         List<string> s = txtSchoolID.Split(',').ToList();
                         e.pupilID = s;
                     }
+
+                    var staff = p.SelectSingleNode("staff");
+                    if (staff != null)
+                    {
+                        string staffID = p["staff"].InnerText;
+                        List<string> s = staffID.Split(',').ToList();
+                        e.staffID = s;
+                    }
                     evn.Add(e);
                 }
 
@@ -82,8 +90,8 @@ namespace SocsFeeds
 
             List<objects.Events> evn = new List<objects.Events>();
             XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString());
-            Console.WriteLine(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString());
+            xmlDocument.Load(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString() + "&staff=1");
+            Console.WriteLine(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString() + "&staff=1");
             XmlNodeList xmlNodeList = xmlDocument.SelectNodes("events");
             foreach (XmlNode evt in xmlNodeList)
             {
@@ -106,6 +114,13 @@ namespace SocsFeeds
                         //convert string to list
                         List<string> s = txtSchoolID.Split(',').ToList();
                         e.pupilID = s;
+                    }
+                    var staff = p.SelectSingleNode("staff");
+                    if (staff != null)
+                    {
+                        string staffID = p["staff"].InnerText;
+                        List<string> s = staffID.Split(',').ToList();
+                        e.staffID = s;
                     }
                     evn.Add(e);
                 }

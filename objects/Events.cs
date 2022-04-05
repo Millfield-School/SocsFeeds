@@ -16,5 +16,6 @@ namespace SocsFeeds.objects
         public bool AlldayEvent { get; set; }
         public string RecurringID { get; set; }
         public List<String> pupilID { get; set; }
+        public List<String> staffID { get; set; }
     }
 }
