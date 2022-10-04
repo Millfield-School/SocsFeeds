@@ -158,7 +158,7 @@ namespace SocsFeeds
 
         public List<objects.ActivityAttendence> GetActivityAttendences(string AcademicTerm, string AcademicYear, string APIKey,int SchoolID, string Category)
         {
-            string SOCSURL = $"https://cms.misocs.com/socs/xml/proactivityabsencereport.ashx?ID={SchoolID}&key={APIKey}&Term={AcademicTerm}&AcademicYear={AcademicYear}" ;
+            string SOCSURL = $"https://www.socscms.com/socs/xml/proactivityabsencereport.ashx?ID={SchoolID}&key={APIKey}&Term={AcademicTerm}&AcademicYear={AcademicYear}" ;
             List<ActivityAttendence> att = new List<ActivityAttendence>();
             XmlDocument xmlDocument = new XmlDocument();
             if(!string.IsNullOrEmpty(Category))
