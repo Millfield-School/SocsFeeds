@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SocsFeeds.objects
 {
-    public class Events
+    public class Event
     {
         public int eventid { get; set; }
         public int clubid { get; set; }

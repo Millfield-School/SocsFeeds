@@ -1,28 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml;
+using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class MusicLessons : IDisposable
     {
-       
-        public List<objects.Tuition> GetLessons(DateTime LessonDate,int SchoolID,string APIKey)
+        public async Task<List<Tuition>> GetLessonsAsync(DateTime lessonDate, int schoolID, string apiKey)
         {
-          string SOCSURL =
-            "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + SchoolID
-                                                                + "&key=" + APIKey + "&data=musiclessons";
+            string SOCSURL = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=musiclessons";
 
-            List<objects.Tuition> ml = new List<objects.Tuition>();
+            List<Tuition> ml = new List<Tuition>();
             XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "&startdate=" + LessonDate.ToLongDateString());
+            using (var httpClient = new HttpClient())
+            {
+                xmlDocument.LoadXml(await httpClient.GetStringAsync(SOCSURL + "&startdate=" + lessonDate.ToLongDateString()));
+            }
             XmlNodeList xmlNodeList = xmlDocument.SelectNodes("lessons");
             foreach (XmlNode lesson in xmlNodeList)
             {
                 foreach (XmlNode ld in lesson.ChildNodes)
                 {
-                    objects.Tuition l = new objects.Tuition();
+                    Tuition l = new Tuition();
                     l.LessonID = Convert.ToInt32(ld["lessonid"].InnerText);
                     var lsd = ld.SelectSingleNode("startdate");
                     if (lsd != null)
@@ -54,16 +56,13 @@ namespace SocsFeeds
                     if (att != null)
                         l.Attendance = ld["attendance"].InnerText;
                     ml.Add(l);
-
                 }
             }
-            
             return ml;
         }
 
         public void Dispose()
         {
-            
 
         }
     }

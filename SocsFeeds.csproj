@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Authors>Millfield School</Authors>
-    <Product>SOCS API Feeds</Product>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.3.0.1</Version>
-    <Copyright>Millfield School</Copyright>
-    <Description>Unoffical SDK for SOCS</Description>
-  </PropertyGroup>
-
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<Authors>Millfield School</Authors>
+		<Product>SOCS API Feeds</Product>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Version>1.3.0.1</Version>
+		<Copyright>Millfield School</Copyright>
+		<Description>Unoffical SDK for SOCS</Description>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 </Project>

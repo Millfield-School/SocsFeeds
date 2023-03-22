@@ -13,8 +13,5 @@ namespace SocsFeeds.objects
         public string DayTime { get; set; }
         public string YearGroups { get; set; }
         public string Gender { get; set; }
-
-
-
     }
 }

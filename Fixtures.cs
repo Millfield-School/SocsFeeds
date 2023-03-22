@@ -1,79 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class Fixtures :IDisposable
+    public class Fixtures : IDisposable
     {
-
-       
-        public List<objects.Fixtures> GetFixtureDetails(DateTime StartDate, DateTime FinishDate, int SchoolID, string APIKey)
+        public async Task<List<Fixture>> GetFixtureDetailsAsync(DateTime startDate, DateTime finishDate, int schoolId, string apiKey)
         {
-            
-            
-            string SOCSURL = "https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID=" + SchoolID + "&key=" + APIKey + "&TS=1";
-            List<objects.Fixtures> sc = new List<objects.Fixtures>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "&startdate=" + StartDate.ToLongDateString() + "&enddate=" + FinishDate.ToLongDateString());
-            string n = SOCSURL + "&startdate=" + StartDate.ToLongDateString() + "&enddate=" + FinishDate.ToLongDateString();
-            XmlNodeList clubnode = xmlDocument.SelectNodes("fixtures");
-            foreach (XmlNode i in clubnode)
+            string url = $"https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID={schoolId}&key={apiKey}&TS=1&startdate={startDate.ToLongDateString()}&enddate={finishDate.ToLongDateString()}";
+            var fixtures = new List<Fixture>();
+            using (var client = new HttpClient())
             {
-                foreach (XmlNode ii in i.ChildNodes)
+                var response = await client.GetAsync(url);
+                var content = await response.Content.ReadAsStringAsync();
+
+                var xmlDocument = new XmlDocument();
+                xmlDocument.LoadXml(content);
+                var clubNodes = xmlDocument.GetElementsByTagName("fixtures");
+
+                foreach (XmlNode clubNode in clubNodes)
                 {
-                    objects.Fixtures c = new objects.Fixtures();
-                    c.EventID = Convert.ToInt32(ii["eventid"].InnerText);
-                    c.Sport = ii["sport"].InnerText;
-                    c.FixtureDate = Convert.ToDateTime(ii["date"].InnerText);
-                    if (ii["meettime"] != null)
-                        c.MeetTime = ii["meettime"].InnerText;
-                    c.FixtureTime = ii["time"].InnerText;
-                    if (ii["returntime"] != null)
-                        c.ReturnTime = ii["returntime"].InnerText;
-                    c.TeamName = ii["team"].InnerText;
-                    c.Opposition = ii["opposition"].InnerText;
-                    c.Oppositionteam = ii["oppositionteam"].InnerText;
-                    if (ii["location"] != null)
-                        c.Location = ii["location"].InnerText;
-                    if (ii["transport"] != null)
-                        c.Transport = ii["transport"].InnerText;
-                    if (ii["details"] != null)
-                        c.Details = ii["details"].InnerText;
-                    if (ii["url"] != null)
-                        c.URL = ii["url"].InnerText;
-                    if (!string.IsNullOrEmpty(ii["startdatefull"].InnerText))
-                        c.StartDateTimeFull = Convert.ToDateTime(ii["startdatefull"].InnerText);
-                    if (!string.IsNullOrEmpty(ii["enddatefull"].InnerText))
-                        c.EndDateTimeFull = Convert.ToDateTime(ii["enddatefull"].InnerText);
-                    if (ii["pupils"] != null)
+                    foreach (XmlNode fixtureNode in clubNode.ChildNodes)
                     {
-                        List<string> pupilid = ii["pupils"].InnerText.Split(',').ToList<string>();
-                        c.PupilsList = pupilid;
+                        var fixture = new Fixture();
+                        fixture.EventID = Convert.ToInt32(fixtureNode["eventid"].InnerText);
+                        fixture.Sport = fixtureNode["sport"].InnerText;
+                        fixture.FixtureDate = Convert.ToDateTime(fixtureNode["date"].InnerText);
+                        fixture.MeetTime = fixtureNode["meettime"]?.InnerText;
+                        fixture.FixtureTime = fixtureNode["time"].InnerText;
+                        fixture.ReturnTime = fixtureNode["returntime"]?.InnerText;
+                        fixture.TeamName = fixtureNode["team"].InnerText;
+                        fixture.Opposition = fixtureNode["opposition"].InnerText;
+                        fixture.Oppositionteam = fixtureNode["oppositionteam"].InnerText;
+                        fixture.Location = fixtureNode["location"]?.InnerText;
+                        fixture.Transport = fixtureNode["transport"]?.InnerText;
+                        fixture.Details = fixtureNode["details"]?.InnerText;
+                        fixture.URL = fixtureNode["url"]?.InnerText;
+                        fixture.StartDateTimeFull = DateTime.TryParse(fixtureNode["startdatefull"].InnerText, out DateTime startDateTimeFull) ? startDateTimeFull : default;
+                        fixture.EndDateTimeFull = DateTime.TryParse(fixtureNode["enddatefull"].InnerText, out DateTime endDateTimeFull) ? endDateTimeFull : default;
+                        if (fixtureNode["pupils"] != null)
+                        {
+                            fixture.PupilsList = fixtureNode["pupils"].InnerText.Split(',').ToList();
+                        }
+
+                        if (fixtureNode["staff"] != null)
+                        {
+                            fixture.StaffList = fixtureNode["staff"].InnerText.Split(',').ToList();
+                        }
+
+                        fixtures.Add(fixture);
                     }
-
-                    if (ii["staff"] != null)
-                    {
-                        List<string> staffid = ii["staff"].InnerText.Split(',').ToList<string>();
-                        c.StaffList = staffid;
-                    }
-
-
-                    sc.Add(c);
                 }
-
             }
-
-            return sc;
+            return fixtures;
         }
 
         public void Dispose()
         {
-            
+
         }
     }
 }

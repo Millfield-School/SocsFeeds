@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SocsFeeds.objects
 {
-    public class Fixtures
+    public class Fixture
     {
         public int EventID { get; set; }
         public string Sport { get; set; }
@@ -21,7 +21,7 @@ namespace SocsFeeds.objects
         public string URL { get; set; }
         public DateTime StartDateTimeFull { get; set; }
         public DateTime EndDateTimeFull { get; set; }
-        public List<string> PupilsList { get; set; }
-        public List<string> StaffList { get; set; }
+        public List<string> PupilsList { get; set; } = new List<string>();
+        public List<string> StaffList { get; set; } = new List<string>();
     }
 }

@@ -1,231 +1,192 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class Events :IDisposable
+    public class Events : IDisposable
     {
-       
-        public  List<objects.EventAttendance> GetEventAttendance(DateTime EventDate, int SchoolID, string APIKey)
+        public async Task<List<EventAttendance>> GetEventAttendance(DateTime eventDate, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
-           
-            List<EventAttendance> att = new List<EventAttendance>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "registers&startdate=" + EventDate.ToLongDateString()+ "&enddate="+EventDate.ToLongDateString());
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("registers");
-            foreach (XmlNode reg in xmlNodeList)
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={eventDate.ToLongDateString()}&enddate={eventDate.ToLongDateString()}";
+            var attendanceList = new List<EventAttendance>();
+
+            using (var client = new HttpClient())
             {
-                foreach (XmlNode p in reg.ChildNodes)
+                var response = await client.GetAsync(socsUrl);
+                var xml = await response.Content.ReadAsStringAsync();
+
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+
+                var attendanceNodes = xmlDoc.SelectNodes("//register/pupil");
+
+                
+
+                foreach (XmlNode attendanceNode in attendanceNodes)
                 {
-                    EventAttendance a = new EventAttendance();
-                    a.eventid = Convert.ToInt32(p["eventid"].InnerText);
-                    a.pupilid = p["pupilid"].InnerText;
-                    var at = p.SelectSingleNode("attendance");
-                    if (at != null)
-                        a.attendance = p["attendance"].InnerText;
-                    att.Add(a);
+                    var attendance = new EventAttendance
+                    {
+                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
+                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
+                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText,
+                    };
+                    attendanceList.Add(attendance);
                 }
-
             }
-
-            return att;
+            return attendanceList;
         }
 
-        public List<objects.Events> GetEventDetails(DateTime EventDate, int SchoolID, string APIKey)
+        public async Task<List<Event>> GetEventDetails(DateTime eventDate, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
-           
-            List<objects.Events> evn = new List<objects.Events>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString() + "&staff=1");
-            Console.WriteLine(SOCSURL + "events&startdate=" + EventDate.ToLongDateString() + "&enddate=" + EventDate.ToLongDateString() + "&staff=1");
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("events");
-            foreach (XmlNode evt in xmlNodeList)
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=events&staff=1";
+            List<Event> events = new List<Event>();
+
+            using (var client = new HttpClient())
             {
-                foreach (XmlNode p in evt.ChildNodes)
+                var response =
+                    await client.GetAsync(
+                        $"{socsUrl}&startdate={eventDate.ToLongDateString()}&enddate={eventDate.ToLongDateString()}");
+                var xml = await response.Content.ReadAsStringAsync();
+
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+                var eventNodes = xmlDoc.SelectNodes("//event");
+
+                foreach (XmlNode eventNode in eventNodes)
                 {
-                    objects.Events e = new objects.Events();
-                    e.clubid = Convert.ToInt32(p["clubid"].InnerText);
-                    e.eventid = Convert.ToInt32(p["eventid"].InnerText);
-                    e.EventTitle = p["title"].InnerText;
-                    e.Location = p["location"].InnerText;
-                    e.StartDate = Convert.ToDateTime(p["startdate"].InnerText);
-                    e.StartTime = p["starttime"].InnerText;
-                    e.EndTime = p["endtime"].InnerText;
-                    e.AlldayEvent = Convert.ToBoolean(p["alldayevent"].InnerText);
-                    e.RecurringID = p["recurringid"].InnerText;
-                    var pupils = p.SelectSingleNode("pupils");
-                    if (pupils != null)
+                    var evt = new Event
                     {
-                        string txtSchoolID = p["pupils"].InnerText;
-                        //convert string to list
-                        List<string> s = txtSchoolID.Split(',').ToList();
-                        e.pupilID = s;
-                    }
-
-                    var staff = p.SelectSingleNode("staff");
-                    if (staff != null)
-                    {
-                        string staffID = p["staff"].InnerText;
-                        List<string> s = staffID.Split(',').ToList();
-                        e.staffID = s;
-                    }
-                    evn.Add(e);
+                        clubid = int.TryParse(eventNode.SelectSingleNode("clubid")?.InnerText, out int clubId) ? clubId : 0,
+                        eventid = int.TryParse(eventNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
+                        EventTitle = eventNode.SelectSingleNode("title")?.InnerText,
+                        Location = eventNode.SelectSingleNode("location")?.InnerText,
+                        StartDate = DateTime.TryParse(eventNode.SelectSingleNode("startdate")?.InnerText, out DateTime startDate) ? startDate : DateTime.MinValue,
+                        StartTime = eventNode.SelectSingleNode("starttime")?.InnerText,
+                        EndTime = eventNode.SelectSingleNode("endtime")?.InnerText,
+                        AlldayEvent = bool.TryParse(eventNode.SelectSingleNode("alldayevent")?.InnerText, out bool alldayEvent) && alldayEvent,
+                        RecurringID = eventNode.SelectSingleNode("recurringid")?.InnerText,
+                        pupilID = eventNode.SelectSingleNode("pupils")?.InnerText.Split(',').ToList(),
+                        staffID = eventNode.SelectSingleNode("staff")?.SelectNodes("staffid").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
+                    };
+                    events.Add(evt);
                 }
-
             }
+               
+            return events;
+        }
+        
+        public async Task<List<Event>> GetEventDetails(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
+        {
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=events&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}&staff=1";
 
-            return evn;
+            using (var client = new HttpClient())
+            using (var response = await client.GetAsync(socsUrl))
+            {
+                var xml = await response.Content.ReadAsStringAsync();
+                var xmlDoc = XDocument.Parse(xml);
+
+                var events = xmlDoc.Descendants("event").Select(x => new Event
+                {
+                    clubid = (int)x.Element("clubid"),
+                    eventid = (int)x.Element("eventid"),
+                    EventTitle = (string)x.Element("title"),
+                    Location = (string)x.Element("location"),
+                    StartDate = (DateTime)x.Element("startdate"),
+                    StartTime = (string)x.Element("starttime"),
+                    EndTime = (string)x.Element("endtime"),
+                    AlldayEvent = (bool)x.Element("alldayevent"),
+                    RecurringID = (string)x.Element("recurringid"),
+                    pupilID = x.Element("pupils")?.Value.Split(',').ToList() ?? new List<string>(),
+                    staffID = x.Element("staff")?.Elements("staffid").Select(s => s.Value).ToList() ?? new List<string>()
+                }).ToList();
+
+                return events;
+            }
         }
 
-        public List<objects.Events> GetEventDetails(DateTime StartEventDate,DateTime EndEventDate, int SchoolID, string APIKey)
+        public async Task<List<EventAttendance>> GetEventAttendance(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers";
+            var eventAttendance = new List<EventAttendance>();
 
-            List<objects.Events> evn = new List<objects.Events>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString() + "&staff=1");
-            Console.WriteLine(SOCSURL + "events&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString() + "&staff=1");
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("events");
-            foreach (XmlNode evt in xmlNodeList)
+            using (var client = new HttpClient())
             {
-                foreach (XmlNode p in evt.ChildNodes)
+                var response =
+                    await client.GetAsync(
+                        $"{socsUrl}&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}");
+                var xml = await response.Content.ReadAsStringAsync();
+
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+
+                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
+                foreach (XmlNode attendanceNode in attendanceNodes)
                 {
-                    objects.Events e = new objects.Events();
-                    e.clubid = Convert.ToInt32(p["clubid"].InnerText);
-                    e.eventid = Convert.ToInt32(p["eventid"].InnerText);
-                    e.EventTitle = p["title"].InnerText;
-                    e.Location = p["location"].InnerText;
-                    e.StartDate = Convert.ToDateTime(p["startdate"].InnerText);
-                    e.StartTime = p["starttime"].InnerText;
-                    e.EndTime = p["endtime"].InnerText;
-                    e.AlldayEvent = Convert.ToBoolean(p["alldayevent"].InnerText);
-                    e.RecurringID = p["recurringid"].InnerText;
-                    var pupils = p.SelectSingleNode("pupils");
-                    if (pupils != null)
+                    var attendance = new EventAttendance
                     {
-                        string txtSchoolID = p["pupils"].InnerText;
-                        //convert string to list
-                        List<string> s = txtSchoolID.Split(',').ToList();
-                        e.pupilID = s;
-                    }
-                    var staff = p.SelectSingleNode("staff");
-                    if (staff != null)
-                    {
-                        string staffID = p["staff"].InnerText;
-                        List<string> s = staffID.Split(',').ToList();
-                        e.staffID = s;
-                    }
-                    evn.Add(e);
+                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
+                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
+                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText
+                    };
+                    eventAttendance.Add(attendance);
                 }
-
             }
-
-            return evn;
+            return eventAttendance;
         }
 
-        public List<objects.EventAttendance> GetEventAttendance(DateTime StartEventDate,DateTime EndEventDate, int SchoolID, string APIKey)
+        public async Task<List<ActivityAttendence>> GetActivityAttendences(string academicTerm, string academicYear, string apiKey, int schoolID, string category)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
+            string socsUrl = $"https://www.socscms.com/socs/xml/proactivityabsencereport.ashx?ID={schoolID}&key={apiKey}&Term={academicTerm}&AcademicYear={academicYear}";
+            var activityAttendences = new List<ActivityAttendence>();
 
-            List<EventAttendance> att = new List<EventAttendance>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "registers&startdate=" + StartEventDate.ToLongDateString() + "&enddate=" + EndEventDate.ToLongDateString());
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("registers");
-            foreach (XmlNode reg in xmlNodeList)
+            if (!string.IsNullOrEmpty(category))
             {
-                foreach (XmlNode p in reg.ChildNodes)
-                {
-                    EventAttendance a = new EventAttendance();
-                    a.eventid = Convert.ToInt32(p["eventid"].InnerText);
-                    a.pupilid = p["pupilid"].InnerText;
-                    var at = p.SelectSingleNode("attendance");
-                    if (at != null)
-                        a.attendance = p["attendance"].InnerText;
-                    att.Add(a);
-                }
-
+                socsUrl += $"&Category=LIKE:{category}";
             }
 
-            return att;
-        }
-
-        public List<objects.ActivityAttendence> GetActivityAttendences(string AcademicTerm, string AcademicYear, string APIKey,int SchoolID, string Category)
-        {
-            string SOCSURL = $"https://www.socscms.com/socs/xml/proactivityabsencereport.ashx?ID={SchoolID}&key={APIKey}&Term={AcademicTerm}&AcademicYear={AcademicYear}" ;
-            List<ActivityAttendence> att = new List<ActivityAttendence>();
-            XmlDocument xmlDocument = new XmlDocument();
-            if(!string.IsNullOrEmpty(Category))
-                xmlDocument.Load(SOCSURL+ $"&Category=LIKE:{Category}");
-            else
-                xmlDocument.Load(SOCSURL);
-
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("/PROactivityAbsenceReport");
-            foreach (XmlNode reg in xmlNodeList)
+            using (var client = new HttpClient())
             {
-                foreach (XmlNode p in reg.ChildNodes)
+                var response = await client.GetAsync(socsUrl);
+                var xml = await response.Content.ReadAsStringAsync();
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+                var activityNodes = xmlDoc.SelectNodes("//PROactivityAbsenceReport/pupil");
+
+                foreach (XmlNode activityNode in activityNodes)
                 {
-                    ActivityAttendence temp = new ActivityAttendence();
-                    temp.txtSchoolID = p["PupilID"].InnerText;
-                    temp.ActivityDateTime = Convert.ToDateTime(p["Date"].InnerText);
-                    temp.ActivityName = p["Activity"].InnerText;
-                    temp.AcademicYear = p["Year"].InnerText;
-                    temp.AcademicTerm = p["Term"].InnerText;
-                    var rb = p["RecordedBy"];
-                    if (rb != null)
-                        temp.RecordedBy = p["RecordedBy"].InnerText;
-
-                    var tic = p["MasterInCharge"];
-                    if (tic != null)
-                        temp.tic = p["MasterInCharge"].InnerText;
-                    var ex = p["Excused"];
-                    if (ex != null)
+                    var activityAttendence = new ActivityAttendence
                     {
-                        string e = p["Excused"].InnerText;
-                        if (e == "1")
-                            temp.excused = true;
-                        else if (e == "0")
-                            temp.excused = false;
-                    }
-                    else
-                    {
-                        temp.excused = null;
-                    }
+                        txtSchoolID = activityNode.SelectSingleNode("PupilID")?.InnerText,
+                        ActivityDateTime = DateTime.TryParse(activityNode.SelectSingleNode("Date")?.InnerText, out DateTime dateTime) ? dateTime : default,
+                        ActivityName = activityNode.SelectSingleNode("Activity")?.InnerText,
+                        AcademicYear = activityNode.SelectSingleNode("Year")?.InnerText,
+                        AcademicTerm = activityNode.SelectSingleNode("Term")?.InnerText,
+                        RecordedBy = activityNode.SelectSingleNode("RecordedBy")?.InnerText,
+                        tic = activityNode.SelectSingleNode("MasterInCharge")?.InnerText,
+                        excused = bool.TryParse(activityNode.SelectSingleNode("Excused")?.InnerText, out bool excusedBool) ? excusedBool : (bool?)null,
+                        excusedReason = activityNode.SelectSingleNode("ExcusedReason")?.InnerText,
+                        excusedby = activityNode.SelectSingleNode("ExcusedBy")?.InnerText,
+                        LastModDate = DateTime.TryParseExact(activityNode.SelectSingleNode("ModifyDate")?.InnerText, "d/M/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime lastModDate) ? lastModDate : default,
+                        ReportPath = activityNode.SelectSingleNode("ReportURL")?.InnerText,
+                    };
 
-                    var er = p["ExcusedReason"];
-                    if (er != null)
-                        temp.excusedReason = p["ExcusedReason"].InnerText;
-                    var eb = p["ExcusedBy"];
-                    if (eb != null)
-                        temp.excusedby = p["ExcusedBy"].InnerText;
-                    var lmd = p["ModifyDate"].InnerText;
-                    if (lmd != null)
-                    {
-                        string[] newdatetime = lmd.Split('/');
-                        string date = newdatetime[1] + "/" + newdatetime[0] + "/" + newdatetime[2];
-                        temp.LastModDate = Convert.ToDateTime(date);
-                    }
-
-                    var rep = p["ReportURL"].InnerText;
-                    if (rep != null)
-                        temp.ReportPath = p["ReportURL"].InnerText;
-
-                    att.Add(temp);
+                    activityAttendences.Add(activityAttendence);
                 }
             }
 
-            return att;
+            return activityAttendences;
         }
-
+        
         public void Dispose()
         {
-            
+
         }
     }
 }

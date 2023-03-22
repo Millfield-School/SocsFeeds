@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml;
 using SocsFeeds.objects;
 
@@ -9,45 +10,39 @@ namespace SocsFeeds
 {
     public class Clubs : IDisposable
     {
-
-
-        public List<objects.Clubs> ClubDetails(int SchoolID, string APIKey)
+        public async Task<List<Club>> GetClubDetails(int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/cocurricular.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=";
-            List<objects.Clubs> clb = new List<objects.Clubs>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "clubs&staff=1");
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("clubs");
-            foreach (XmlNode clNode in xmlNodeList)
-            {
-                foreach (XmlNode p in clNode.ChildNodes)
-                {
-                    objects.Clubs e = new objects.Clubs();
-                    e.term = p["term"].InnerText;
-                    e.academicYear = p["academicyear"].InnerText;
-                    e.category = p["category"].InnerText;
-                    e.clubID = Convert.ToInt32(p["clubid"].InnerText);
-                    e.clubname = p["clubname"].InnerText;
-                    e.gender = p["gender"].InnerText;
-                    var years = p.SelectSingleNode("yeargroups");
-                    if (years != null)
-                    {
-                        string yr = p["yeargroups"].InnerText;
-                       List<string> s = yr.Split(',').ToList();
-                       e.yearGroups = s;
-                    }
-                    var staff = p.SelectSingleNode("staff");
-                    if (years != null)
-                    {
-                        string staffid = p["staff"].InnerText;
-                        List<string> d = staffid.Split(',').ToList();
-                        e.staffID = d;
-                    }
-                    clb.Add(e);
-                }
-            }
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=clubs&staff=1";
 
-            return clb;
+            using (var client = new HttpClient())
+            using (var response = await client.GetAsync(socsUrl))
+            {
+                var xml = await response.Content.ReadAsStringAsync();
+
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+
+                var clubNodes = xmlDoc.SelectNodes("//club");
+
+                var clubs = new List<Club>();
+
+                foreach (XmlNode clubNode in clubNodes)
+                {
+                    var club = new Club
+                    {
+                        Term = clubNode.SelectSingleNode("term")?.InnerText,
+                        AcademicYear = clubNode.SelectSingleNode("academicyear")?.InnerText,
+                        Category = clubNode.SelectSingleNode("category")?.InnerText,
+                        ClubID = int.TryParse(clubNode.SelectSingleNode("clubid")?.InnerText, out int clubId) ? clubId : 0,
+                        ClubName = clubNode.SelectSingleNode("clubname")?.InnerText,
+                        Gender = clubNode.SelectSingleNode("gender")?.InnerText,
+                        YearGroups = clubNode.SelectNodes("yeargroups/yeargroup").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
+                        StaffIDs = clubNode.SelectNodes("staff/staffid").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
+                    };
+                    clubs.Add(club);
+                }
+                return clubs;
+            }
         }
 
         public void Dispose()

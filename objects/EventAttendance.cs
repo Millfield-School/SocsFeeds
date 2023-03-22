@@ -6,9 +6,8 @@ namespace SocsFeeds.objects
 {
     public class EventAttendance
     {
-        public int eventid { get; set; }
-        public string pupilid { get; set; }
-        public string attendance { get; set; }
-
+        public int EventID { get; set; }
+        public string PupilID { get; set; }
+        public string Attendance { get; set; }
     }
 }

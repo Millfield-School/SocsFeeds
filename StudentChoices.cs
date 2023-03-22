@@ -1,46 +1,57 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Xml;
-using SocsFeeds.objects;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace SocsFeeds
 {
-    public class StudentChoices :IDisposable
+    public class StudentChoices : IDisposable
     {
-        
-
-        public List<objects.Choices> StudentClubs(string AcademicYear, string term, string Category, int SchoolID, string APIKey)
+        public async Task<List<objects.Choices>> StudentClubsAsync(string academicYear, string term, string category, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID=" + SchoolID + "&key=" + APIKey;
-            List<objects.Choices> sc = new List<Choices>();
-            XmlDocument xmlDocument = new XmlDocument();
-            if (!string.IsNullOrEmpty(Category))
-                xmlDocument.Load(SOCSURL + $"&Term={term}&AcademicYear={AcademicYear}&Category=LIKE:{Category}");
-            else
-                xmlDocument.Load(SOCSURL + $"&Term={term}&AcademicYear={AcademicYear}");
+            string socsUrl = $"https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID={schoolID}&key={apiKey}";
 
-            XmlNodeList clubnode = xmlDocument.SelectNodes("/ActivityClubParticipation/pupil");
-            foreach (XmlNode i in clubnode)
+            if (!string.IsNullOrEmpty(category))
             {
-                objects.Choices c = new Choices();
-                c.ActivityName = i["Activity"].InnerText;
-                c.Term = i["Term"].InnerText;
-                c.PupilID = i["PupilID"].InnerText;
-                c.AcademicYear = i["Year"].InnerText;
-                c.Gender = i["Gender"].InnerText;
-                c.DayTime = i["DayTime"].InnerText;
-                c.YearGroups = i["YearGroups"].InnerText;
-                sc.Add(c);
+                socsUrl += $"&Term={term}&AcademicYear={academicYear}&Category=LIKE:{category}";
+            }
+            else
+            {
+                socsUrl += $"&Term={term}&AcademicYear={academicYear}";
             }
 
-            return sc;
+            var client = new HttpClient();
+            var response = await client.GetAsync(socsUrl);
+            response.EnsureSuccessStatusCode();
 
+            var xml = await response.Content.ReadAsStringAsync();
+            var xmlDoc = XDocument.Parse(xml);
+
+            var choicesNodes = xmlDoc.Descendants("pupil");
+            var choices = new List<objects.Choices>();
+
+            foreach (var node in choicesNodes)
+            {
+                var choice = new objects.Choices
+                {
+                    ActivityName = node.Element("Activity")?.Value,
+                    Term = node.Element("Term")?.Value,
+                    PupilID = node.Element("PupilID")?.Value,
+                    AcademicYear = node.Element("Year")?.Value,
+                    Gender = node.Element("Gender")?.Value,
+                    DayTime = node.Element("DayTime")?.Value,
+                    YearGroups = node.Element("YearGroups")?.Value
+                };
+
+                choices.Add(choice);
+            }
+            return choices;
         }
 
         public void Dispose()
         {
-            
+
         }
     }
 }

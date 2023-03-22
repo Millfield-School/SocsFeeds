@@ -1,6 +1,8 @@
-﻿using System;
+﻿using SocsFeeds.objects;
+using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml;
 
 namespace SocsFeeds
@@ -8,55 +10,41 @@ namespace SocsFeeds
     public class SportsCoaching : IDisposable
 
     {
-        public List<objects.Tuition> GetLessons(DateTime LessonDate, int SchoolID, string APIKey)
+        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=sportcoaching";
-            List<objects.Tuition> ml = new List<objects.Tuition>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "&startdate=" + LessonDate.ToLongDateString());
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("lessons");
+            string socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=sportcoaching&startdate={lessonDate.ToLongDateString()}";
 
-            foreach (XmlNode lesson in xmlNodeList)
+            var client = new HttpClient();
+            var response = await client.GetAsync(socsUrl);
+
+            var xml = await response.Content.ReadAsStringAsync();
+
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(xml);
+
+            var lessonNodes = xmlDoc.SelectNodes("//lesson");
+
+            var lessons = new List<Tuition>();
+            foreach (XmlNode lessonNode in lessonNodes)
             {
-                foreach (XmlNode ld in lesson.ChildNodes)
+                var lesson = new Tuition
                 {
-                    objects.Tuition l = new objects.Tuition();
-                    l.LessonID = Convert.ToInt32(ld["lessonid"].InnerText);
-                    var lsd = ld.SelectSingleNode("startdate");
-                    if (lsd != null)
-                        l.LessonStartDate = Convert.ToDateTime(ld["startdate"].InnerText);
-                    var lst = ld.SelectSingleNode("starttime");
-                    if (lst != null)
-                        l.LessonStartTime = ld["starttime"].InnerText;
-                    var let = ld.SelectSingleNode("endtime");
-                    if (let != null)
-                        l.LessonEndTime = ld["endtime"].InnerText;
-                    var ins = ld.SelectSingleNode("subject");
-                    if (ins != null)
-                        l.LessonType = ld["subject"].InnerText;
-                    var tit = ld.SelectSingleNode("title");
-                    if (tit != null)
-                        l.LessonTitle = ld["title"].InnerText;
-                    var loc = ld.SelectSingleNode("location");
-                    if (loc != null)
-                        l.Location = ld["location"].InnerText;
-                    var cts = ld.SelectSingleNode("costschool");
-                    if (cts != null)
-                        l.LessonCostSchool = Convert.ToDecimal(ld["costschool"].InnerText);
-                    var ctp = ld.SelectSingleNode("costpupil");
-                    if (ctp != null)
-                        l.LessonCostPupil = Convert.ToDecimal(ld["costpupil"].InnerText);
-                    l.StaffID = ld["staffid"].InnerText;
-                    l.PupilID = ld["pupilid"].InnerText;
-                    var att = ld.SelectSingleNode("attendance");
-                    if (att != null)
-                        l.Attendance = ld["attendance"].InnerText;
-                    ml.Add(l);
-
-                }
+                    LessonID = int.TryParse(lessonNode.SelectSingleNode("lessonid")?.InnerText, out int lessonId) ? lessonId : 0,
+                    LessonStartDate = Convert.ToDateTime(lessonNode.SelectSingleNode("startdate")?.InnerText),
+                    LessonStartTime = lessonNode.SelectSingleNode("starttime")?.InnerText,
+                    LessonEndTime = lessonNode.SelectSingleNode("endtime")?.InnerText,
+                    LessonType = lessonNode.SelectSingleNode("subject")?.InnerText,
+                    LessonTitle = lessonNode.SelectSingleNode("title")?.InnerText,
+                    Location = lessonNode.SelectSingleNode("location")?.InnerText,
+                    LessonCostSchool = decimal.TryParse(lessonNode.SelectSingleNode("costschool")?.InnerText, out decimal costSchool) ? costSchool : 0,
+                    LessonCostPupil = decimal.TryParse(lessonNode.SelectSingleNode("costpupil")?.InnerText, out decimal costPupil) ? costPupil : 0,
+                    StaffID = lessonNode.SelectSingleNode("staffid")?.InnerText,
+                    PupilID = lessonNode.SelectSingleNode("pupilid")?.InnerText,
+                    Attendance = lessonNode.SelectSingleNode("attendance")?.InnerText
+                };
+                lessons.Add(lesson);
             }
-
-            return ml;
+            return lessons;
         }
 
         public void Dispose()

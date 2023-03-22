@@ -1,67 +1,56 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
+using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class performingarts :IDisposable
+    public class PerformingArts : IDisposable
     {
-       
-
-        public List<objects.Tuition> GetLessons(DateTime LessonDate, int SchoolID, string APIKey)
+        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
-            string SOCSURL = "https://www.socscms.com/socs/xml/tuition.ashx?ID=" + SchoolID + "&key=" + APIKey + "&data=performingarts";
-            List<objects.Tuition> ml = new List<objects.Tuition>();
-            XmlDocument xmlDocument = new XmlDocument();
-            xmlDocument.Load(SOCSURL + "&startdate=" + LessonDate.ToLongDateString());
-            XmlNodeList xmlNodeList = xmlDocument.SelectNodes("lessons");
-            foreach (XmlNode lesson in xmlNodeList)
-            {
-                foreach (XmlNode ld in lesson.ChildNodes)
-                {
-                    objects.Tuition l = new objects.Tuition();
-                    l.LessonID = Convert.ToInt32(ld["lessonid"].InnerText);
-                    var lsd = ld.SelectSingleNode("startdate");
-                    if (lsd != null)
-                        l.LessonStartDate = Convert.ToDateTime(ld["startdate"].InnerText);
-                    var lst = ld.SelectSingleNode("starttime");
-                    if (lst != null)
-                        l.LessonStartTime = ld["starttime"].InnerText;
-                    var let = ld.SelectSingleNode("endtime");
-                    if (let != null)
-                        l.LessonEndTime = ld["endtime"].InnerText;
-                    var ins = ld.SelectSingleNode("instrument");
-                    if (ins != null)
-                        l.LessonType = ld["instrument"].InnerText;
-                    var tit = ld.SelectSingleNode("title");
-                    if (tit != null)
-                        l.LessonTitle = ld["title"].InnerText;
-                    var loc = ld.SelectSingleNode("location");
-                    if (loc != null)
-                        l.Location = ld["location"].InnerText;
-                    var cts = ld.SelectSingleNode("costschool");
-                    if (cts != null)
-                        l.LessonCostSchool = Convert.ToDecimal(ld["costschool"].InnerText);
-                    var ctp = ld.SelectSingleNode("costpupil");
-                    if (ctp != null)
-                        l.LessonCostPupil = Convert.ToDecimal(ld["costpupil"].InnerText);
-                    l.StaffID = ld["staffid"].InnerText;
-                    l.PupilID = ld["pupilid"].InnerText;
-                    var att = ld.SelectSingleNode("attendance");
-                    if (att != null)
-                        l.Attendance = ld["attendance"].InnerText;
-                    ml.Add(l);
+            var socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=performingarts&startdate={lessonDate.ToLongDateString()}";
 
-                }
+            using var client = new HttpClient();
+            var response = await client.GetAsync(socsUrl);
+            var xml = await response.Content.ReadAsStringAsync();
+
+            var xmlDoc = XDocument.Parse(xml);
+
+            var lessonNodes = xmlDoc.Descendants("lessons").Elements();
+
+            var lessons = new List<Tuition>();
+
+            foreach (var lessonNode in lessonNodes)
+            {
+                var lesson = new Tuition
+                {
+                    LessonID = int.TryParse(lessonNode.Element("lessonid")?.Value, out int lessonId) ? lessonId : 0,
+                    LessonStartDate = DateTime.TryParse(lessonNode.Element("startdate")?.Value, out DateTime lessonStartDate) ? lessonStartDate : default,
+                    LessonStartTime = lessonNode.Element("starttime")?.Value,
+                    LessonEndTime = lessonNode.Element("endtime")?.Value,
+                    LessonType = lessonNode.Element("instrument")?.Value,
+                    LessonTitle = lessonNode.Element("title")?.Value,
+                    Location = lessonNode.Element("location")?.Value,
+                    LessonCostSchool = decimal.TryParse(lessonNode.Element("costschool")?.Value, out decimal lessonCostSchool) ? lessonCostSchool : 0,
+                    LessonCostPupil = decimal.TryParse(lessonNode.Element("costpupil")?.Value, out decimal lessonCostPupil) ? lessonCostPupil : 0,
+                    StaffID = lessonNode.Element("staffid")?.Value,
+                    PupilID = lessonNode.Element("pupilid")?.Value,
+                    Attendance = lessonNode.Element("attendance")?.Value,
+                };
+                lessons.Add(lesson);
             }
 
-            return ml;
+            return lessons;
         }
 
         public void Dispose()
         {
-            
+
         }
     }
 }
