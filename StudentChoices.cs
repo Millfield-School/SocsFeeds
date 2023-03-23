@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class StudentChoices : IDisposable
     {
-        public async Task<List<objects.Choices>> StudentClubsAsync(string academicYear, string term, string category, int schoolID, string apiKey)
+        public async Task<List<Choices>> StudentClubsAsync(string academicYear, string term, string category, int schoolID, string apiKey)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID={schoolID}&key={apiKey}";
 
@@ -29,7 +30,7 @@ namespace SocsFeeds
             var xmlDoc = XDocument.Parse(xml);
 
             var choicesNodes = xmlDoc.Descendants("pupil");
-            var choices = new List<objects.Choices>();
+            var choices = new List<Choices>();
 
             foreach (var node in choicesNodes)
             {

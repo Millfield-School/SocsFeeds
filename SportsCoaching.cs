@@ -50,7 +50,6 @@ namespace SocsFeeds
         public void Dispose()
         {
 
-
         }
     }
 }
