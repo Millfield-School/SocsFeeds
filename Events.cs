@@ -42,7 +42,37 @@ namespace SocsFeeds
             }
             return attendanceList;
         }
+        
+        public async Task<List<EventAttendance>> GetEventAttendance(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
+        {
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers";
+            var eventAttendance = new List<EventAttendance>();
 
+            using (var client = new HttpClient())
+            {
+                var response =
+                    await client.GetAsync(
+                        $"{socsUrl}&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}");
+                var xml = await response.Content.ReadAsStringAsync();
+
+                var xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(xml);
+
+                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
+                foreach (XmlNode attendanceNode in attendanceNodes)
+                {
+                    var attendance = new EventAttendance
+                    {
+                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
+                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
+                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText
+                    };
+                    eventAttendance.Add(attendance);
+                }
+            }
+            return eventAttendance;
+        }
+        
         public async Task<List<Event>> GetEventDetails(DateTime eventDate, int schoolID, string apiKey)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=events&staff=1";
@@ -110,37 +140,7 @@ namespace SocsFeeds
                 return events;
             }
         }
-
-        public async Task<List<EventAttendance>> GetEventAttendance(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
-        {
-            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers";
-            var eventAttendance = new List<EventAttendance>();
-
-            using (var client = new HttpClient())
-            {
-                var response =
-                    await client.GetAsync(
-                        $"{socsUrl}&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}");
-                var xml = await response.Content.ReadAsStringAsync();
-
-                var xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(xml);
-
-                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
-                foreach (XmlNode attendanceNode in attendanceNodes)
-                {
-                    var attendance = new EventAttendance
-                    {
-                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
-                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
-                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText
-                    };
-                    eventAttendance.Add(attendance);
-                }
-            }
-            return eventAttendance;
-        }
-
+        
         public async Task<List<ActivityAttendence>> GetActivityAttendences(string academicTerm, string academicYear, string apiKey, int schoolID, string category)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/proactivityabsencereport.ashx?ID={schoolID}&key={apiKey}&Term={academicTerm}&AcademicYear={academicYear}";

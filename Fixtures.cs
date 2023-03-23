@@ -10,7 +10,7 @@ namespace SocsFeeds
 {
     public class Fixtures : IDisposable
     {
-        public async Task<List<Fixture>> GetFixtureDetailsAsync(DateTime startDate, DateTime finishDate, int schoolId, string apiKey)
+        public async Task<List<Fixture>> GetFixtureDetails(DateTime startDate, DateTime finishDate, int schoolId, string apiKey)
         {
             string url = $"https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID={schoolId}&key={apiKey}&TS=1&startdate={startDate.ToLongDateString()}&enddate={finishDate.ToLongDateString()}";
             var fixtures = new List<Fixture>();

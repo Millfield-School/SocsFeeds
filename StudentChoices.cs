@@ -9,7 +9,7 @@ namespace SocsFeeds
 {
     public class StudentChoices : IDisposable
     {
-        public async Task<List<Choices>> StudentClubsAsync(string academicYear, string term, string category, int schoolID, string apiKey)
+        public async Task<List<Choices>> StudentClubs(string academicYear, string term, string category, int schoolID, string apiKey)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/proactivityClubParticipationreport.ashx?ID={schoolID}&key={apiKey}";
 

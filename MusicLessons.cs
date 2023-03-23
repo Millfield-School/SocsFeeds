@@ -9,7 +9,7 @@ namespace SocsFeeds
 {
     public class MusicLessons : IDisposable
     {
-        public async Task<List<Tuition>> GetLessonsAsync(DateTime lessonDate, int schoolID, string apiKey)
+        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
             string SOCSURL = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=musiclessons";
 
