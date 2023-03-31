@@ -7,15 +7,22 @@ using System.Xml;
 
 namespace SocsFeeds
 {
-    public class SportsCoaching : IDisposable
+    public class SportsCoaching 
 
     {
-        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
+        public static async Task<(List<Tuition>,string)>GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=sportcoaching&startdate={lessonDate.ToLongDateString()}";
 
             var client = new HttpClient();
             var response = await client.GetAsync(socsUrl);
+
+            // If the response indicates failure, return an error message
+            if (!response.IsSuccessStatusCode)
+            {
+                string errorMessage = $"Error retrieving Sports Coaching data. Status code: {response.StatusCode}";
+                return (null, errorMessage);
+            }
 
             var xml = await response.Content.ReadAsStringAsync();
 
@@ -44,12 +51,9 @@ namespace SocsFeeds
                 };
                 lessons.Add(lesson);
             }
-            return lessons;
+            return (lessons,null);
         }
 
-        public void Dispose()
-        {
-
-        }
+        
     }
 }

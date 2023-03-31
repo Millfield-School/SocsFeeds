@@ -7,14 +7,22 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class PerformingArts : IDisposable
+    public class PerformingArts
     {
-        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
+        public static async Task<(List<Tuition>,string)> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
             var socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=performingarts&startdate={lessonDate.ToLongDateString()}";
 
             using var client = new HttpClient();
             var response = await client.GetAsync(socsUrl);
+
+            // If the response indicates failure, return an error message
+            if (!response.IsSuccessStatusCode)
+            {
+                string errorMessage = $"Error retrieving Performing Arts data. Status code: {response.StatusCode}";
+                return (null, errorMessage);
+            }
+
             var xml = await response.Content.ReadAsStringAsync();
 
             var xmlDoc = XDocument.Parse(xml);
@@ -43,12 +51,9 @@ namespace SocsFeeds
                 lessons.Add(lesson);
             }
 
-            return lessons;
+            return (lessons,null);
         }
 
-        public void Dispose()
-        {
-
-        }
+        
     }
 }

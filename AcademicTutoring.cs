@@ -7,18 +7,24 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class AcademicTutoring : IDisposable
+    public class AcademicTutoring 
 
     {
-        public async Task<List<Tuition>> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
+        public static async Task<(List<Tuition>, string)> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
         {
-            string socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=academictutoring&startdate={lessonDate.ToLongDateString()}";
-            var lessons = new List<Tuition>();
-
             try
             {
+                string socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=academictutoring&startdate={lessonDate.ToLongDateString()}";
+                var lessons = new List<Tuition>();
+
                 using var client = new HttpClient();
                 using var response = await client.GetAsync(socsUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string errorMessage = $"Error retrieving Tuition data. Status code: {response.StatusCode}";
+                    return (null, errorMessage);
+                }
 
                 var xml = await response.Content.ReadAsStringAsync();
 
@@ -26,7 +32,7 @@ namespace SocsFeeds
                 xmlDoc.LoadXml(xml);
 
                 var lessonNodes = xmlDoc.SelectNodes("//lesson");
-                
+
                 foreach (XmlNode lessonNode in lessonNodes)
                 {
                     var lesson = new Tuition
@@ -47,18 +53,17 @@ namespace SocsFeeds
 
                     lessons.Add(lesson);
                 }
+
+                return (lessons, null);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e);
-              
+                string errorMessage = $"An error occurred while retrieving Tuition data: {ex.Message}";
+                return (null, errorMessage);
             }
-            return lessons;
         }
 
-        public void Dispose()
-        {
-        }
+
     }
 }
 
