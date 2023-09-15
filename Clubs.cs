@@ -45,7 +45,7 @@ namespace SocsFeeds
                             ClubName = clubNode.SelectSingleNode("clubname")?.InnerText,
                             Gender = clubNode.SelectSingleNode("gender")?.InnerText,
                             YearGroups = clubNode.SelectNodes("yeargroups/yeargroup").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
-                            StaffIDs = clubNode.SelectNodes("staff/staffid").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
+                            StaffIDs = clubNode.SelectNodes("staff").Cast<XmlNode>().SelectMany(x => x.InnerText.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)).ToList(),
                         };
                         clubs.Add(club);
                     }
