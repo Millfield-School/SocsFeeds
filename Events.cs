@@ -12,30 +12,42 @@ namespace SocsFeeds
 {
     public class Events 
     {
-       
-        public static async Task<(List<EventAttendance>,string)> GetEventAttendance(DateTime eventDate, int schoolID, string apiKey)
+
+        public static async Task<(List<EventAttendance>, string)> GetEventAttendance(DateTime eventDate, int schoolID, string apiKey)
         {
-            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={eventDate.ToLongDateString()}&enddate={eventDate.ToLongDateString()}";
-            var client = new HttpClient();
-            var response = await client.GetAsync(socsUrl);
-            
-            var attendanceList = new List<EventAttendance>();
+            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={eventDate:yyyy-MM-dd}&enddate={eventDate:yyyy-MM-dd}";
 
-            if (!response.IsSuccessStatusCode)
+            using (var client = new HttpClient()) // Consider moving HttpClient to a static field or use HttpClientFactory
             {
-                string errorMessage = $"Error retrieving Event Attendance. Status code: {response.StatusCode}";
-                return (null, errorMessage);
-            }
+                HttpResponseMessage response;
+                try
+                {
+                    response = await client.GetAsync(socsUrl);
+                }
+                catch (HttpRequestException e)
+                {
+                    return (null, $"Request error: {e.Message}");
+                }
 
-            
+                if (!response.IsSuccessStatusCode)
+                {
+                    return (null, $"Error retrieving Event Attendance. Status code: {response.StatusCode}");
+                }
+
                 var xml = await response.Content.ReadAsStringAsync();
-
                 var xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(xml);
 
-                var attendanceNodes = xmlDoc.SelectNodes("//register/pupil");
+                try
+                {
+                    xmlDoc.LoadXml(xml);
+                }
+                catch (XmlException e)
+                {
+                    return (null, $"XML parsing error: {e.Message} XML Content {xml}");
+                }
 
-                
+                var attendanceList = new List<EventAttendance>();
+                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
 
                 foreach (XmlNode attendanceNode in attendanceNodes)
                 {
@@ -47,10 +59,12 @@ namespace SocsFeeds
                     };
                     attendanceList.Add(attendance);
                 }
-            
-            return (attendanceList,null);
+
+                return (attendanceList, null);
+            }
         }
-        
+
+
         public static async Task<(List<EventAttendance>,string)> GetEventAttendance(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
         {
             string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}";
@@ -65,7 +79,9 @@ namespace SocsFeeds
             }
             var eventAttendance = new List<EventAttendance>();
             {
-                var xml = await response.Content.ReadAsStringAsync();
+                try { 
+                
+                 var xml = await response.Content.ReadAsStringAsync();
                 var xmlDoc = new XmlDocument();
                 xmlDoc.LoadXml(xml);
                 var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
@@ -79,6 +95,21 @@ namespace SocsFeeds
                     };
                     eventAttendance.Add(attendance);
                 }
+                
+                
+                
+                    }
+                catch (XmlException xmlEx)
+                {
+                    string errorMessage = $"Error parsing XML: {xmlEx.Message}";
+                    return (null, errorMessage);
+                }
+                catch (Exception ex)
+                {
+                    string errorMessage = $"An unexpected error occurred: {ex.Message}";
+                    return (null, errorMessage);
+                }
+
             }
             return (eventAttendance,null);
         }

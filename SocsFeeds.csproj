@@ -4,7 +4,7 @@
 		<Authors>Millfield School</Authors>
 		<Product>SOCS API Feeds</Product>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>1.5.5</Version>
+		<Version>1.5.6</Version>
 		<Copyright>Millfield School</Copyright>
 		<Description>Unoffical SDK for SOCS</Description>
 		<LangVersion>latest</LangVersion>
