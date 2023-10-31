@@ -258,7 +258,12 @@ namespace SocsFeeds
                             AcademicTerm = activityNode.SelectSingleNode("Term")?.InnerText,
                             RecordedBy = activityNode.SelectSingleNode("RecordedBy")?.InnerText,
                             tic = activityNode.SelectSingleNode("MasterInCharge")?.InnerText,
-                            excused = bool.TryParse(activityNode.SelectSingleNode("Excused")?.InnerText, out bool excusedBool) ? excusedBool : (bool?)null,
+                            excused = activityNode.SelectSingleNode("Excused")?.InnerText switch
+                            {
+                                "1" => true,
+                                "0" => false,
+                                _ => bool.TryParse(activityNode.SelectSingleNode("Excused")?.InnerText, out bool excusedBool) ? excusedBool : (bool?)null,
+                            },
                             excusedReason = activityNode.SelectSingleNode("ExcusedReason")?.InnerText,
                             excusedby = activityNode.SelectSingleNode("ExcusedBy")?.InnerText,
                             LastModDate = DateTime.TryParseExact(activityNode.SelectSingleNode("ModifyDate")?.InnerText, "d/M/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime lastModDate) ? lastModDate : default,
