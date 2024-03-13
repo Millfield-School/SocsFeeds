@@ -1,0 +1,22 @@
+name: Deploy Application
+
+on: [push]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      name: Check out repository code
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Replace secrets in connections.json
+      run: |
+        sed -i 's/{MainServerConnectionString}/${{ secrets.MAINSERVERCONNECTION }}/g' connections.json
+      shell: bash
+
+    # Add steps to build and deploy your application using the connections.json
