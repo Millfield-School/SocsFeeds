@@ -1,65 +1,70 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
+using SocsFeeds.helpers;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class Clubs 
     {
-        public static async Task<(List<Club>, string)> GetClubDetails(int schoolID, string apiKey)
+        public class Root
+        {
+            public List<Club> Clubs { get; set; } = new List<Club>();
+        }
+        
+        public static async Task<Response<Root>> GetClubDetails()
         {
             try
             {
-                string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=clubs&staff=1";
-
-                using (var client = new HttpClient())
-                using (var response = await client.GetAsync(socsUrl))
+                var extraParameters = new Dictionary<string, string>
                 {
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        string errorMessage = $"Error retrieving club details. Status code: {response.StatusCode}";
-                        return (null, errorMessage);
-                    }
+                    {"data", "clubs"},
+                    {"staff", "1"}
+                };
+                var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
-                    var xml = await response.Content.ReadAsStringAsync();
-
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml(xml);
-
-                    var clubNodes = xmlDoc.SelectNodes("//club");
-
-                    var clubs = new List<Club>();
-
-                    foreach (XmlNode clubNode in clubNodes)
-                    {
-                        var club = new Club
-                        {
-                            Term = clubNode.SelectSingleNode("term")?.InnerText,
-                            AcademicYear = clubNode.SelectSingleNode("academicyear")?.InnerText,
-                            Category = clubNode.SelectSingleNode("category")?.InnerText,
-                            ClubID = int.TryParse(clubNode.SelectSingleNode("clubid")?.InnerText, out int clubId) ? clubId : 0,
-                            ClubName = clubNode.SelectSingleNode("clubname")?.InnerText,
-                            Gender = clubNode.SelectSingleNode("gender")?.InnerText,
-                            YearGroups = clubNode.SelectNodes("yeargroups/yeargroup").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
-                            StaffIDs = clubNode.SelectNodes("staff").Cast<XmlNode>().SelectMany(x => x.InnerText.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)).ToList(),
-                        };
-                        clubs.Add(club);
-                    }
-
-                    return (clubs, null);
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var clubs = ParseFromXml(responseXml);
+                    return Response<Root>.Success(new Root { Clubs = clubs });
                 }
+
+                return Response<Root>.Error(response.ReasonPhrase);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                string errorMessage = $"An error occurred while retrieving club details: {ex.Message}";
-                return (null, errorMessage);
+                return Response<Root>.Error($"Error retrieving Club data - {e.Message}");
             }
         }
 
+        private static List<Club> ParseFromXml(string xml)
+        {
+            var tuitions = new List<Club>();
+            var responseXml = XDocument.Parse(xml);
 
+            foreach (var node in responseXml.Descendants("club"))
+            {
+                var temp = new Club
+                {
+                    Term = node.Element("term")?.Value,
+                    AcademicYear = node.Element("academicyear")?.Value,
+                    Category = node.Element("category")?.Value,
+                    ClubID = int.TryParse(node.Element("clubid")?.Value, out int clubId) ? clubId : 0,
+                    ClubName = node.Element("clubname")?.Value,
+                    Gender = node.Element("gender")?.Value,
+                    YearGroups = ParserUtility.ParseCommaSeparatedValues<int>(node.Element("yeargroups")?.Value),
+                    StaffIDs = ParserUtility.ParseCommaSeparatedValues<string>(node.Element("staff")?.Value)
+                };
+                tuitions.Add(temp);
+            }
+            return tuitions;
+        }
     }
 }

@@ -1,59 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
+using System.Globalization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using SocsFeeds.helpers;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class PerformingArts
     {
-        public static async Task<(List<Tuition>,string)> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
+        public class Root
         {
-            var socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=performingarts&startdate={lessonDate.ToLongDateString()}";
-
-            using var client = new HttpClient();
-            var response = await client.GetAsync(socsUrl);
-
-            // If the response indicates failure, return an error message
-            if (!response.IsSuccessStatusCode)
-            {
-                string errorMessage = $"Error retrieving Performing Arts data. Status code: {response.StatusCode}";
-                return (null, errorMessage);
-            }
-
-            var xml = await response.Content.ReadAsStringAsync();
-
-            var xmlDoc = XDocument.Parse(xml);
-
-            var lessonNodes = xmlDoc.Descendants("lessons").Elements();
-
-            var lessons = new List<Tuition>();
-
-            foreach (var lessonNode in lessonNodes)
-            {
-                var lesson = new Tuition
-                {
-                    LessonID = int.TryParse(lessonNode.Element("lessonid")?.Value, out int lessonId) ? lessonId : 0,
-                    LessonStartDate = DateTime.TryParse(lessonNode.Element("startdate")?.Value, out DateTime lessonStartDate) ? lessonStartDate : default,
-                    LessonStartTime = lessonNode.Element("starttime")?.Value,
-                    LessonEndTime = lessonNode.Element("endtime")?.Value,
-                    LessonType = lessonNode.Element("instrument")?.Value,
-                    LessonTitle = lessonNode.Element("title")?.Value,
-                    Location = lessonNode.Element("location")?.Value,
-                    LessonCostSchool = decimal.TryParse(lessonNode.Element("costschool")?.Value, out decimal lessonCostSchool) ? lessonCostSchool : 0,
-                    LessonCostPupil = decimal.TryParse(lessonNode.Element("costpupil")?.Value, out decimal lessonCostPupil) ? lessonCostPupil : 0,
-                    StaffID = lessonNode.Element("staffid")?.Value,
-                    PupilID = lessonNode.Element("pupilid")?.Value,
-                    Attendance = lessonNode.Element("attendance")?.Value,
-                };
-                lessons.Add(lesson);
-            }
-
-            return (lessons,null);
+            public List<Tuition> Tuitions { get; set; } = new List<Tuition>();
         }
 
-        
+        public static async Task<Response<Root>> GetLessons(DateTime lessonDate = default)
+        {
+            try
+            {
+                var extraParameters = new Dictionary<string, string>
+                {
+                    {"data", "performingarts"},
+                };
+                
+                if (lessonDate != DateTime.MinValue)
+                    extraParameters.Add("startdate", lessonDate.ToLongDateString());
+
+                var response = await ApiClientProvider.GetApiResponseAsync("tuition", extraParameters);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var lessons = ParseFromXml(responseXml);
+                    return Response<Root>.Success(new Root { Tuitions = lessons });
+                }
+
+                return Response<Root>.Error(response.ReasonPhrase);
+            }
+            catch (Exception e)
+            {
+                return Response<Root>.Error($"Error retrieving Tuition data - {e.Message}");
+            }
+        }
+
+        private static List<Tuition> ParseFromXml(string xml)
+        {
+            var tuitions = new List<Tuition>();
+            var responseXml = XDocument.Parse(xml);
+
+            foreach (var node in responseXml.Descendants("lesson"))
+            {
+                var temp = new Tuition
+                {
+                    LessonID = Convert.ToInt32(node.Element("lessonid")?.Value ?? "0"),
+                    LessonStartDate = DateOnly.ParseExact(node.Element("startdate")?.Value, "dd/MM/yyyy", CultureInfo.InvariantCulture),
+                    LessonStartTime = node.Element("starttime")?.Value,
+                    LessonEndTime = node.Element("endtime")?.Value,
+                    LessonType = node.Element("subject")?.Value!,
+                    LessonTitle = node.Element("title")?.Value!,
+                    Location = node.Element("location")?.Value!,
+                    LessonCostSchool = decimal.Parse(node.Element("costschool")?.Value ?? "0"),
+                    LessonCostPupil = decimal.Parse(node.Element("costpupil")?.Value ?? "0"),
+                    StaffID = node.Element("staffid")?.Value!,
+                    PupilID = node.Element("pupilid")?.Value ?? "0",
+                    Attendance = node.Element("attendance")?.Value!
+                };
+                tuitions.Add(temp);
+            }
+            return tuitions;
+        }
+
     }
 }

@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace SocsFeeds.objects
 {
     public class Tuition
     {
         public int LessonID { get; set; }
-        public DateTime LessonStartDate { get; set; }
+        public DateOnly LessonStartDate { get; set; }
         public string LessonStartTime { get; set; }
         public string LessonEndTime { get; set; }
         public string LessonType { get; set; }

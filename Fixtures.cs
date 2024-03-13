@@ -1,122 +1,132 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using SocsFeeds.objects; // Import any necessary namespaces
+using SocsFeeds.helpers;
+using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class Fixtures
     {
-        public static async Task<(List<Fixture>, string)> GetFixtureDetails(DateTime startDate, DateTime finishDate, int schoolId, string apiKey)
+        public class Root
         {
-            string url = $"https://www.schoolssports.com/school/xml/fixturecalendar.ashx?ID={schoolId}&key={apiKey}&TS=1&startdate={startDate.ToLongDateString()}&enddate={finishDate.ToLongDateString()}";
-            var fixtures = new List<Fixture>();
-            using (var client = new HttpClient())
+            public List<Fixture> Fixtures { get; set; } = new List<Fixture>();
+        }
+
+        public class AttendanceRoot
+        {
+            public List<FixtureAttendence> Fixtures { get; set; } = new List<FixtureAttendence>();
+        }
+        
+        public static async Task<Response<Root>> GetFixtureDetails(DateTime startDate, DateTime finishDateTime)
+        {
+            try
             {
-                var response = await client.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
+                var extraParameters = new Dictionary<string, string>
                 {
-                    string errorMessage = $"Error retrieving fixture data. Status code: {response.StatusCode}";
-                    return (null, errorMessage);
-                }
-                var content = await response.Content.ReadAsStringAsync();
+                    {"startdate", startDate.ToLongDateString()},
+                    {"enddate", finishDateTime.ToLongDateString()},
+                    {"ts", "1"}
+                };
+                
+                var response = await ApiClientProvider.GetApiResponseAsync("fixturecalendar", extraParameters);
 
-                try
+                if (response.IsSuccessStatusCode)
                 {
-                    var xmlDocument = XDocument.Parse(content);
-                    var fixtureNodes = xmlDocument.Descendants("fixture");
-                    foreach (var fixtureNode in fixtureNodes)
-                    {
-                        var fixture = new Fixture
-                        {
-                            EventID = Convert.ToInt32(fixtureNode.Element("eventid")?.Value),
-                            Sport = fixtureNode.Element("sport")?.Value,
-                            FixtureDate = Convert.ToDateTime(fixtureNode.Element("date")?.Value),
-                            MeetTime = fixtureNode.Element("meettime")?.Value,
-                            FixtureTime = fixtureNode.Element("time")?.Value,
-                            ReturnTime = fixtureNode.Element("returntime")?.Value,
-                            TeamName = fixtureNode.Element("team")?.Value,
-                            Opposition = fixtureNode.Element("opposition")?.Value,
-                            Oppositionteam = fixtureNode.Element("oppositionteam")?.Value,
-                            Location = fixtureNode.Element("location")?.Value,
-                            Transport = fixtureNode.Element("transport")?.Value,
-                            Details = fixtureNode.Element("details")?.Value,
-                            URL = fixtureNode.Element("url")?.Value,
-                            StartDateTimeFull = DateTime.TryParse(fixtureNode.Element("startdatefull")?.Value, out DateTime startDateTimeFull) ? startDateTimeFull : default,
-                            EndDateTimeFull = DateTime.TryParse(fixtureNode.Element("enddatefull")?.Value, out DateTime endDateTimeFull) ? endDateTimeFull : default
-                        };
-                        if (fixtureNode.Element("pupils") != null)
-                        {
-                            fixture.PupilsList = fixtureNode.Element("pupils")?.Value.Split(',').ToList();
-                        }
-
-                        if (fixtureNode.Element("staff") != null)
-                        {
-                            fixture.StaffList = fixtureNode.Element("staff")?.Value.Split(',').ToList();
-                        }
-
-                        fixtures.Add(fixture);
-                    }
-                    return (fixtures, null);
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var fixtures = ParseDetailsFromXml(responseXml);
+                    return Response<Root>.Success(new Root { Fixtures = fixtures });
                 }
-                catch (Exception ex)
-                {
-                    string errorMessage = $"Error parsing fixture data. {ex.Message}";
-                    return (null, errorMessage);
-                }
+
+                return Response<Root>.Error(response.ReasonPhrase);
+            }
+            catch (Exception e)
+            {
+                return Response<Root>.Error($"Error retrieving fixture details data - {e.Message}");
             }
         }
 
-        public static async Task<(List<FixtureAttendence>, string)> GetFixtureAttendance(DateTime startDate,
-            int schoolId, string apiKey)
+        private static List<Fixture> ParseDetailsFromXml(string xml)
         {
-            string url =
-                $"https://www.schoolssports.com/school/xml/mso-sport.ashx?ID={schoolId}&key={apiKey}&data=registers&startdate={startDate.ToLongDateString()}";
-            var fixtures = new List<FixtureAttendence>();
-            using (var client = new HttpClient())
+            var tuitions = new List<Fixture>();
+            var responseXml = XDocument.Parse(xml);
+
+            foreach (var node in responseXml.Descendants("fixture"))
             {
-                var response = await client.GetAsync(url);
-                if (!response.IsSuccessStatusCode)
+                var temp = new Fixture
                 {
-                    string errorMessage = $"Error retrieving fixture data. Status code: {response.StatusCode}";
-                    return (null, errorMessage);
-                }
-
-                var content = await response.Content.ReadAsStringAsync();
-
-                try
-                {
-                    var xmlDocument = XDocument.Parse(content);
-                    var fixtureNodes = xmlDocument.Descendants("pupil");
-                    foreach (var fixtureNode in fixtureNodes)
-                    {
-                        var fixture = new FixtureAttendence()
-                        {
-                            fixtureid = Convert.ToInt32(fixtureNode.Element("eventid")?.Value),
-                            pupilid = fixtureNode.Element("pupilid")?.Value,
-                            attendancestatus = fixtureNode.Element("attendancestatus")?.Value,
-                            consentstatus = Convert.ToInt32(fixtureNode.Element("consentstatus")?.Value),
-                            transportfromconfirmed = Convert.ToBoolean(fixtureNode.Element("transporttoconfirmed")?.Value),
-                            transporttooption = fixtureNode.Element("transporttooption")?.Value,
-                            transporttoconfirmed = Convert.ToBoolean(fixtureNode.Element("transportfromconfirmed")?.Value),
-                            transportfromoption = fixtureNode.Element("transportfromoption")?.Value
-                            
-                        };
-                       
-
-                        fixtures.Add(fixture);
-                    }
-                    return (fixtures, null);
-                }
-                catch (Exception ex)
-                {
-                    string errorMessage = $"Error parsing fixture data. {ex.Message}";
-                    return (null, errorMessage);
-                }
+                    EventID = Convert.ToInt32(node.Element("eventid")?.Value),
+                    Sport = node.Element("sport")?.Value,
+                    FixtureDate = Convert.ToDateTime(node.Element("date")?.Value),
+                    MeetTime = node.Element("meettime")?.Value,
+                    FixtureTime = node.Element("time")?.Value,
+                    ReturnTime = node.Element("returntime")?.Value,
+                    TeamName = node.Element("team")?.Value,
+                    Opposition = node.Element("opposition")?.Value,
+                    Oppositionteam = node.Element("oppositionteam")?.Value,
+                    Location = node.Element("location")?.Value,
+                    Transport = node.Element("transport")?.Value,
+                    Details = node.Element("details")?.Value,
+                    URL = node.Element("url")?.Value,
+                    StartDateTimeFull = DateTime.TryParse(node.Element("startdatefull")?.Value, out DateTime startDateTimeFull) ? startDateTimeFull : default,
+                    EndDateTimeFull = DateTime.TryParse(node.Element("enddatefull")?.Value, out DateTime endDateTimeFull) ? endDateTimeFull : default,
+                    PupilsList = ParserUtility.ParseCommaSeparatedValues<string>(node.Element("pupils")?.Value),
+                    StaffList = ParserUtility.ParseCommaSeparatedValues<string>(node.Element("staff")?.Value)
+                };
+                tuitions.Add(temp);
             }
+            return tuitions;
+        }
+        
+        public static async Task<Response<AttendanceRoot>> GetFixtureAttendance(DateTime startDate)
+        {
+            try
+            {
+                var extraParameters = new Dictionary<string, string>
+                {
+                    {"startdate", startDate.ToLongDateString()},
+                    {"data", "registers"}
+                };
+
+                var response = await ApiClientProvider.GetApiResponseAsync("mso-sport", extraParameters);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var fixtures = ParseAttendanceFromXml(responseXml);
+                    return Response<AttendanceRoot>.Success(new AttendanceRoot { Fixtures = fixtures });
+                }
+
+                return Response<AttendanceRoot>.Error(response.ReasonPhrase);
+            }
+            catch (Exception e)
+            {
+                return Response<AttendanceRoot>.Error($"Error retrieving fixture attendance data - {e.Message}");
+            }
+        }
+
+        private static List<FixtureAttendence> ParseAttendanceFromXml(string xml)
+        {
+            var attendance = new List<FixtureAttendence>();
+            var responseXml = XDocument.Parse(xml);
+
+            foreach (var node in responseXml.Descendants("pupil"))
+            {
+                var temp = new FixtureAttendence
+                {
+                    fixtureid = Convert.ToInt32(node.Element("eventid")?.Value),
+                    pupilid = node.Element("pupilid")?.Value,
+                    attendancestatus = node.Element("attendancestatus")?.Value,
+                    consentstatus = Convert.ToInt32(node.Element("consentstatus")?.Value),
+                    transportfromconfirmed = Convert.ToBoolean(node.Element("transporttoconfirmed")?.Value),
+                    transporttooption = node.Element("transporttooption")?.Value,
+                    transporttoconfirmed = Convert.ToBoolean(node.Element("transportfromconfirmed")?.Value),
+                    transportfromoption = node.Element("transportfromoption")?.Value
+                };
+                attendance.Add(temp);
+            }
+            return attendance;
         }
     }
 }

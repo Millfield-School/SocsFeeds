@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace SocsFeeds.objects
 {
@@ -12,7 +10,7 @@ namespace SocsFeeds.objects
         public string Category { get; set; }
         public string ClubName { get; set; }
         public string Gender { get; set; }
-        public List<string> YearGroups { get; set; }
+        public List<int> YearGroups { get; set; }
         public List<string> StaffIDs { get; set; }
     }
 }

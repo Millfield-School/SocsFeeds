@@ -1,288 +1,193 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using System.Xml;
 using System.Xml.Linq;
+using SocsFeeds.helpers;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class Events 
     {
-
-        public static async Task<(List<EventAttendance>, string)> GetEventAttendance(DateTime eventDate, int schoolID, string apiKey)
+        public class AttendanceRoot
         {
-            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={eventDate:yyyy-MM-dd}&enddate={eventDate:yyyy-MM-dd}";
-
-            using (var client = new HttpClient()) // Consider moving HttpClient to a static field or use HttpClientFactory
-            {
-                HttpResponseMessage response;
-                try
-                {
-                    response = await client.GetAsync(socsUrl);
-                }
-                catch (HttpRequestException e)
-                {
-                    return (null, $"Request error: {e.Message}");
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return (null, $"Error retrieving Event Attendance. Status code: {response.StatusCode}");
-                }
-
-                var xml = await response.Content.ReadAsStringAsync();
-                var xmlDoc = new XmlDocument();
-
-                try
-                {
-                    xmlDoc.LoadXml(xml);
-                }
-                catch (XmlException e)
-                {
-                    return (null, $"XML parsing error: {e.Message} XML Content {xml}");
-                }
-
-                var attendanceList = new List<EventAttendance>();
-                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
-
-                foreach (XmlNode attendanceNode in attendanceNodes)
-                {
-                    var attendance = new EventAttendance
-                    {
-                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
-                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
-                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText,
-                    };
-                    attendanceList.Add(attendance);
-                }
-
-                return (attendanceList, null);
-            }
+            public List<EventAttendance> Attendances { get; set; } = new List<EventAttendance>();
         }
 
-
-        public static async Task<(List<EventAttendance>,string)> GetEventAttendance(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
+        public class DetailsRoot
         {
-            string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=registers&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}";
-            Console.WriteLine(socsUrl);
-            var client = new HttpClient();
-            var response = await client.GetAsync(socsUrl);
-            var attendanceList = new List<EventAttendance>();
-            if (!response.IsSuccessStatusCode)
-            {
-                string errorMessage = $"Error retrieving Event Attendance. Status code: {response.StatusCode}";
-                return (null, errorMessage);
-            }
-            var eventAttendance = new List<EventAttendance>();
-            {
-                try { 
-                
-                 var xml = await response.Content.ReadAsStringAsync();
-                var xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(xml);
-                var attendanceNodes = xmlDoc.SelectNodes("//registers/pupil");
-                foreach (XmlNode attendanceNode in attendanceNodes)
-                {
-                    var attendance = new EventAttendance
-                    {
-                        EventID = int.TryParse(attendanceNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
-                        PupilID = attendanceNode.SelectSingleNode("pupilid")?.InnerText,
-                        Attendance = attendanceNode.SelectSingleNode("attendance")?.InnerText
-                    };
-                    eventAttendance.Add(attendance);
-                }
-                
-                
-                
-                    }
-                catch (XmlException xmlEx)
-                {
-                    string errorMessage = $"Error parsing XML: {xmlEx.Message}";
-                    return (null, errorMessage);
-                }
-                catch (Exception ex)
-                {
-                    string errorMessage = $"An unexpected error occurred: {ex.Message}";
-                    return (null, errorMessage);
-                }
-
-            }
-            return (eventAttendance,null);
+            public List<Event> Details { get; set; } = new List<Event>();
         }
 
-        public static async Task<(List<Event>, string)> GetEventDetails(DateTime eventDate, int schoolID, string apiKey)
+        public class ActivityRoot
+        {
+            public List<ActivityAttendence> ActivityAttences { get; set; } = new List<ActivityAttendence>();
+        }
+
+        public static async Task<Response<AttendanceRoot>> GetEventAttendance(DateTime eventDatetime, DateTime endDateTime = default)
         {
             try
             {
-                string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=events&staff=1";
-                List<Event> events = new List<Event>();
-
-                using (var client = new HttpClient())
+                var extraParameters = new Dictionary<string, string>
                 {
-                    var response = await client.GetAsync($"{socsUrl}&startdate={eventDate.ToLongDateString()}&enddate={eventDate.ToLongDateString()}");
+                    {"data", "registers"},
+                    {"startdate", eventDatetime.ToString("dd-MM-yyyy")}
+                };
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        string errorMessage = $"Error retrieving event details. Status code: {response.StatusCode}";
-                        return (null, errorMessage);
-                    }
+                if (endDateTime != DateTime.MinValue)
+                    extraParameters.Add("enddate", endDateTime.ToString("dd-MM-yyyy"));
+                
+                var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
-                    var xml = await response.Content.ReadAsStringAsync();
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml(xml);
-
-                    var eventNodes = xmlDoc.SelectNodes("//event");
-
-                    foreach (XmlNode eventNode in eventNodes)
-                    {
-                        var evt = new Event
-                        {
-                            clubid = int.TryParse(eventNode.SelectSingleNode("clubid")?.InnerText, out int clubId) ? clubId : 0,
-                            eventid = int.TryParse(eventNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
-                            EventTitle = eventNode.SelectSingleNode("title")?.InnerText,
-                            Location = eventNode.SelectSingleNode("location")?.InnerText,
-                            StartDate = DateTime.ParseExact(eventNode.SelectSingleNode("startdate")?.InnerText, "dd/MM/yyyy", CultureInfo.InvariantCulture),
-                            StartTime = eventNode.SelectSingleNode("starttime")?.InnerText,
-                            EndTime = eventNode.SelectSingleNode("endtime")?.InnerText,
-                            AlldayEvent = bool.TryParse(eventNode.SelectSingleNode("alldayevent")?.InnerText, out bool alldayEvent) && alldayEvent,
-                            RecurringID = eventNode.SelectSingleNode("recurringid")?.InnerText,
-                            pupilID = eventNode.SelectSingleNode("pupils")?.InnerText.Split(',').ToList(),
-                            staffID = eventNode.SelectSingleNode("staff")?.SelectNodes("staffid").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
-                        };
-                        events.Add(evt);
-                    }
-
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var attendance = ParseAttendanceFromXml(responseXml);
+                    return Response<AttendanceRoot>.Success(new AttendanceRoot { Attendances = attendance });
                 }
-                return (events, null);
+
+                return Response<AttendanceRoot>.Error(response.ReasonPhrase);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                string errorMessage = $"An error occurred while retrieving event details: {ex.Message}";
-                return (null, errorMessage);
+                return Response<AttendanceRoot>.Error($"Error retrieving Event Attendance data - {e.Message}");
             }
         }
+        
+        private static List<EventAttendance> ParseAttendanceFromXml(string xml)
+        {
+            var attendances = new List<EventAttendance>();
+            var responseXml = XDocument.Parse(xml);
 
-
-        public static async Task<(List<Event>, string)> GetEventDetails(DateTime startEventDate, DateTime endEventDate, int schoolID, string apiKey)
+            foreach (var node in responseXml.Descendants("pupil"))
+            {
+                var temp = new EventAttendance
+                {
+                    EventID = int.TryParse(node.Element("eventid")?.Value, out int eventId) ? eventId : 0,
+                    PupilID = node.Element("pupilid")?.Value,
+                    Attendance = node.Element("attendance")?.Value,
+                };
+                attendances.Add(temp);
+            }
+            return attendances;
+        }
+       
+        public static async Task<Response<DetailsRoot>> GetEventDetails(DateTime eventDatetime, DateTime endDateTime = default)
         {
             try
             {
-                string socsUrl = $"https://www.socscms.com/socs/xml/cocurricular.ashx?ID={schoolID}&key={apiKey}&data=events&staff=1";
-                List<Event> events = new List<Event>();
-
-                using (var client = new HttpClient())
+                var extraParameters = new Dictionary<string, string>
                 {
-                    var response = await client.GetAsync($"{socsUrl}&startdate={startEventDate.ToLongDateString()}&enddate={endEventDate.ToLongDateString()}");
+                    {"data", "events"},
+                    {"staff", "1"},
+                    {"startdate", eventDatetime.ToLongDateString()}
+                };
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        string errorMessage = $"Error retrieving event details. Status code: {response.StatusCode}";
-                        return (null, errorMessage);
-                    }
+                if (endDateTime != DateTime.MinValue)
+                    extraParameters.Add("enddate", endDateTime.ToLongDateString());
 
-                    var xml = await response.Content.ReadAsStringAsync();
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml(xml);
+                var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
-                    var eventNodes = xmlDoc.SelectNodes("//event");
-
-                    foreach (XmlNode eventNode in eventNodes)
-                    {
-                        var evt = new Event
-                        {
-                            clubid = int.TryParse(eventNode.SelectSingleNode("clubid")?.InnerText, out int clubId) ? clubId : 0,
-                            eventid = int.TryParse(eventNode.SelectSingleNode("eventid")?.InnerText, out int eventId) ? eventId : 0,
-                            EventTitle = eventNode.SelectSingleNode("title")?.InnerText,
-                            Location = eventNode.SelectSingleNode("location")?.InnerText,
-                            StartDate = DateTime.ParseExact(eventNode.SelectSingleNode("startdate")?.InnerText, "dd/MM/yyyy", CultureInfo.InvariantCulture),
-                            StartTime = eventNode.SelectSingleNode("starttime")?.InnerText,
-                            EndTime = eventNode.SelectSingleNode("endtime")?.InnerText,
-                            AlldayEvent = bool.TryParse(eventNode.SelectSingleNode("alldayevent")?.InnerText, out bool alldayEvent) && alldayEvent,
-                            RecurringID = eventNode.SelectSingleNode("recurringid")?.InnerText,
-                            pupilID = eventNode.SelectSingleNode("pupils")?.InnerText.Split(',').ToList(),
-                            staffID = eventNode.SelectSingleNode("staff")?.SelectNodes("staffid").Cast<XmlNode>().Select(x => x.InnerText).ToList(),
-                        };
-                        events.Add(evt);
-                    }
-
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var details = ParseDetailsFromXml(responseXml);
+                    return Response<DetailsRoot>.Success(new DetailsRoot { Details = details });
                 }
-                return (events, null);
+
+                return Response<DetailsRoot>.Error(response.ReasonPhrase);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                string errorMessage = $"An error occurred while retrieving event details: {ex.Message}";
-                return (null, errorMessage);
+                return Response<DetailsRoot>.Error($"Error retrieving Event Details data - {e.Message}");
             }
         }
 
-        public static async Task<(List<ActivityAttendence>, string)> GetActivityAttendences(string academicTerm, string academicYear, string apiKey, int schoolID, string category)
+        private static List<Event> ParseDetailsFromXml(string xml)
+        {
+            var details = new List<Event>();
+            var responseXml = XDocument.Parse(xml);
+
+            foreach (var node in responseXml.Descendants("event"))
+            {
+                var temp = new Event
+                {
+                    clubid = int.TryParse(node.Element("clubid")?.Value, out int clubId) ? clubId : 0,
+                    eventid = int.TryParse(node.Element("eventid")?.Value, out int eventId) ? eventId : 0,
+                    EventTitle = node.Element("title")?.Value,
+                    Location = node.Element("location")?.Value,
+                    StartDate = DateTime.ParseExact(node.Element("startdate")?.Value, "dd/MM/yyyy", CultureInfo.InvariantCulture),
+                    StartTime = node.Element("starttime")?.Value,
+                    EndTime = node.Element("endtime")?.Value,
+                    AlldayEvent = bool.TryParse(node.Element("alldayevent")?.Value, out bool alldayEvent) && alldayEvent,
+                    RecurringID = node.Element("recurringid")?.Value,
+                    pupilID = ParserUtility.ParseCommaSeparatedValues<string>(node.Element("pupils")?.Value),
+                    staffID = ParserUtility.ParseCommaSeparatedValues<string>(node.Element("staff")?.Value),
+                };
+                details.Add(temp);
+            }
+            return details;
+        }
+
+        public static async Task<Response<ActivityRoot>> GetActivityAttendences(string acadTerm, string fullAcadYear)
         {
             try
             {
-                string socsUrl = $"https://www.socscms.com/socs/xml/proactivityabsencereport.ashx?ID={schoolID}&key={apiKey}&Term={academicTerm}&AcademicYear={academicYear}";
-
-                if (!string.IsNullOrEmpty(category))
+                var extraParameters = new Dictionary<string, string>
                 {
-                    socsUrl += $"&Category=LIKE:{category}";
+                    {"term", acadTerm},
+                    {"academicYear", fullAcadYear}
+                };
+
+                var response = await ApiClientProvider.GetApiResponseAsync("proactivityabsencereport", extraParameters);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var attendance = ParseActivityFromXml(responseXml);
+                    return Response<ActivityRoot>.Success(new ActivityRoot { ActivityAttences = attendance });
                 }
 
-                using (var client = new HttpClient())
-                {
-                    var response = await client.GetAsync(socsUrl);
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        string errorMessage = $"Error retrieving activity attendances. Status code: {response.StatusCode}";
-                        return (null, errorMessage);
-                    }
-
-                    var xml = await response.Content.ReadAsStringAsync();
-                    var xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml(xml);
-
-                    var activityNodes = xmlDoc.SelectNodes("//PROactivityAbsenceReport/pupil");
-                    var activityAttendences = new List<ActivityAttendence>();
-
-                    foreach (XmlNode activityNode in activityNodes)
-                    {
-                        var activityAttendence = new ActivityAttendence
-                        {
-                            txtSchoolID = activityNode.SelectSingleNode("PupilID")?.InnerText,
-                            ActivityDateTime = DateTime.TryParse(activityNode.SelectSingleNode("Date")?.InnerText, out DateTime dateTime) ? dateTime : default,
-                            ActivityName = activityNode.SelectSingleNode("Activity")?.InnerText,
-                            AcademicYear = activityNode.SelectSingleNode("Year")?.InnerText,
-                            AcademicTerm = activityNode.SelectSingleNode("Term")?.InnerText,
-                            RecordedBy = activityNode.SelectSingleNode("RecordedBy")?.InnerText,
-                            tic = activityNode.SelectSingleNode("MasterInCharge")?.InnerText,
-                            excused = activityNode.SelectSingleNode("Excused")?.InnerText switch
-                            {
-                                "1" => true,
-                                "0" => false,
-                                _ => bool.TryParse(activityNode.SelectSingleNode("Excused")?.InnerText, out bool excusedBool) ? excusedBool : (bool?)null,
-                            },
-                            excusedReason = activityNode.SelectSingleNode("ExcusedReason")?.InnerText,
-                            excusedby = activityNode.SelectSingleNode("ExcusedBy")?.InnerText,
-                            LastModDate = DateTime.TryParseExact(activityNode.SelectSingleNode("ModifyDate")?.InnerText, "d/M/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime lastModDate) ? lastModDate : default,
-                            ReportPath = activityNode.SelectSingleNode("ReportURL")?.InnerText,
-                        };
-
-                        activityAttendences.Add(activityAttendence);
-                    }
-
-                    return (activityAttendences, null);
-                }
+                return Response<ActivityRoot>.Error(response.ReasonPhrase);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                string errorMessage = $"An error occurred while retrieving activity attendances: {ex.Message}";
-                return (null, errorMessage);
+                return Response<ActivityRoot>.Error($"Error retrieving Activity Attendance data - {e.Message}");
             }
         }
 
+        private static List<ActivityAttendence> ParseActivityFromXml(string xml)
+        {
+            var attendances = new List<ActivityAttendence>();
+            var responseXml = XDocument.Parse(xml);
 
+            foreach (var node in responseXml.Descendants("pupil"))
+            {
+                var temp = new ActivityAttendence
+                {
+                    txtSchoolID = node.Element("PupilID")?.Value,
+                    ActivityDateTime = DateTime.TryParse(node.Element("Date")?.Value, out DateTime dateTime) ? dateTime : default,
+                    ActivityName = node.Element("Activity")?.Value,
+                    AcademicYear = node.Element("Year")?.Value,
+                    AcademicTerm = node.Element("Term")?.Value,
+                    RecordedBy = node.Element("RecordedBy")?.Value,
+                    tic = node.Element("MasterInCharge")?.Value,
+                    excused = node.Element("Excused")?.Value switch
+                    { 
+                        "1" => true,
+                        "0" => false,
+                        _ => bool.TryParse(node.Element("Excused")?.Value, out bool excusedBool) ? excusedBool : (bool?)null,
+                    },
+                    excusedReason = node.Element("ExcusedReason")?.Value,
+                    excusedby = node.Element("ExcusedBy")?.Value,
+                    LastModDate = DateTime.TryParseExact(node.Element("ModifyDate")?.Value, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime lastModDate) ? lastModDate : default,
+                    ReportPath = node.Element("ReportURL")?.Value
+                };
+                attendances.Add(temp);
+            }
+            return attendances;
+        }
+      
     }
 }

@@ -1,69 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
+using System.Globalization;
 using System.Threading.Tasks;
-using System.Xml;
+using System.Xml.Linq;
+using SocsFeeds.helpers;
 using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
     public class AcademicTutoring 
-
     {
-        public static async Task<(List<Tuition>, string)> GetLessons(DateTime lessonDate, int schoolID, string apiKey)
+        public class Root
+        {
+            public List<Tuition> Tuitions { get; set; } = new List<Tuition>();
+        }
+        
+        public static async Task<Response<Root>> GetLessons(DateTime lessonDate = default)
         {
             try
             {
-                string socsUrl = $"https://www.socscms.com/socs/xml/tuition.ashx?ID={schoolID}&key={apiKey}&data=academictutoring&startdate={lessonDate.ToLongDateString()}";
-                var lessons = new List<Tuition>();
-
-                using var client = new HttpClient();
-                using var response = await client.GetAsync(socsUrl);
-
-                if (!response.IsSuccessStatusCode)
+                var extraParameters = new Dictionary<string, string>
                 {
-                    string errorMessage = $"Error retrieving Tuition data. Status code: {response.StatusCode}";
-                    return (null, errorMessage);
+                    {"data", "academictutoring"}
+                };
+
+                if (lessonDate != DateTime.MinValue)
+                    extraParameters.Add("startdate", lessonDate.ToLongDateString());
+
+                var response = await ApiClientProvider.GetApiResponseAsync("tuition", extraParameters);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseXml = await response.Content.ReadAsStringAsync();
+                    var lessons = ParseFromXml(responseXml);
+                    return Response<Root>.Success(new Root { Tuitions = lessons });
                 }
 
-                var xml = await response.Content.ReadAsStringAsync();
-
-                var xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(xml);
-
-                var lessonNodes = xmlDoc.SelectNodes("//lesson");
-
-                foreach (XmlNode lessonNode in lessonNodes)
-                {
-                    var lesson = new Tuition
-                    {
-                        LessonID = int.Parse(lessonNode.SelectSingleNode("lessonid")?.InnerText ?? "0"),
-                        LessonStartDate = DateTime.Parse(lessonNode.SelectSingleNode("startdate")?.InnerText ?? string.Empty),
-                        LessonStartTime = lessonNode.SelectSingleNode("starttime")?.InnerText!,
-                        LessonEndTime = lessonNode.SelectSingleNode("endtime")?.InnerText!,
-                        LessonType = lessonNode.SelectSingleNode("subject")?.InnerText!,
-                        LessonTitle = lessonNode.SelectSingleNode("title")?.InnerText!,
-                        Location = lessonNode.SelectSingleNode("location")?.InnerText!,
-                        LessonCostSchool = decimal.Parse(lessonNode.SelectSingleNode("costschool")?.InnerText ?? "0"),
-                        LessonCostPupil = decimal.Parse(lessonNode.SelectSingleNode("costpupil")?.InnerText ?? "0"),
-                        StaffID = lessonNode.SelectSingleNode("staffid")?.InnerText!,
-                        PupilID = lessonNode.SelectSingleNode("pupilid")?.InnerText!,
-                        Attendance = lessonNode.SelectSingleNode("attendance")?.InnerText!,
-                    };
-
-                    lessons.Add(lesson);
-                }
-
-                return (lessons, null);
+                return Response<Root>.Error(response.ReasonPhrase);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                string errorMessage = $"An error occurred while retrieving Tuition data: {ex.Message}";
-                return (null, errorMessage);
+                return Response<Root>.Error($"Error retrieving Tuition data - {e.Message}");
             }
         }
 
+        private static List<Tuition> ParseFromXml(string xml)
+        {
+            var tuitions = new List<Tuition>();
+            var responseXml = XDocument.Parse(xml);
 
+            foreach (var node in responseXml.Descendants("lesson"))
+            {
+                var temp = new Tuition
+                {
+                    LessonID = Convert.ToInt32(node.Element("lessonid")?.Value ?? "0"),
+                    LessonStartDate = DateOnly.ParseExact(node.Element("startdate")?.Value, "dd/MM/yyyy", CultureInfo.InvariantCulture),
+                    LessonStartTime = node.Element("starttime")?.Value,
+                    LessonEndTime = node.Element("endtime")?.Value,
+                    LessonType = node.Element("subject")?.Value!,
+                    LessonTitle = node.Element("title")?.Value!,
+                    Location = node.Element("location")?.Value!,
+                    LessonCostSchool = decimal.Parse(node.Element("costschool")?.Value ?? "0"),
+                    LessonCostPupil = decimal.Parse(node.Element("costpupil")?.Value ?? "0"),
+                    StaffID = node.Element("staffid")?.Value!,
+                    PupilID = node.Element("pupilid")?.Value ?? "0",
+                    Attendance = node.Element("attendance")?.Value!
+                };
+                tuitions.Add(temp);
+            }
+            return tuitions;
+        }
     }
 }
 
