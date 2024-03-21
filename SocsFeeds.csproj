@@ -1,13 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Authors>Millfield School</Authors>
-    <Product>SOCS API Feeds</Product>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2024.8.3.1</Version>
-    <Copyright>Millfield School</Copyright>
-    <Description>Unoffical SDK for SOCS</Description>
-    <LangVersion>latest</LangVersion>
-    <UserSecretsId>232fcec1-bf87-47dc-b020-6854cb502110</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Authors>Millfield School</Authors>
+		<Company>Millfield School</Company>
+		<Copyright>Millfield School</Copyright>
+		<Product>SOCS API Feeds</Product>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Version>2024.8.3.6</Version>
+		<Description>Unoffical SDK for SOCS</Description>
+		<PackageTags>socs, api, socs api, socs feed, feed, feeds</PackageTags>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 </Project>

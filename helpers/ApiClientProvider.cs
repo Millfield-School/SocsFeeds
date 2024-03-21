@@ -28,7 +28,7 @@ namespace SocsFeeds.helpers
             {
                 try
                 {
-                    var response = await httpClient.GetAsync(url);
+                    var response = await httpClient.GetAsync(url).ConfigureAwait(false);
                     return response.IsSuccessStatusCode;
                 }
                 catch (HttpRequestException e)
@@ -58,15 +58,28 @@ namespace SocsFeeds.helpers
                 }
             }
 
-            if (endpoint.Equals("fixturecalendar") || endpoint.Equals("results") || endpoint.Equals("mso-sport"))
-                _httpClient.BaseAddress = new Uri("https://www.schoolssports.com/school/xml/");
-            else
-                _httpClient.BaseAddress = new Uri(BaseUrl);
+            //if (endpoint.Equals("fixturecalendar") || endpoint.Equals("results") || endpoint.Equals("mso-sport"))
+            //    _httpClient.BaseAddress = new Uri("https://www.schoolssports.com/school/xml/");
+            //else
+            //    _httpClient.BaseAddress = new Uri(BaseUrl);
+
+            //// Build the query string
+            //var queryString = await new FormUrlEncodedContent(queryParameters).ReadAsStringAsync().ConfigureAwait(false);
+            //var requestUri = $"{_httpClient.BaseAddress}{endpoint}.ashx?{queryString}";
+            //return await _httpClient.GetAsync(requestUri).ConfigureAwait(false);
+
+            string baseUrl = endpoint.Equals("fixturecalendar") || endpoint.Equals("results") || endpoint.Equals("mso-sport") ?
+                "https://www.schoolssports.com/school/xml/" : BaseUrl;
 
             // Build the query string
-            var queryString = await new FormUrlEncodedContent(queryParameters).ReadAsStringAsync();
-            var requestUri = $"{_httpClient.BaseAddress}{endpoint}.ashx?{queryString}";
-            return await _httpClient.GetAsync(requestUri);
+            var queryString = await new FormUrlEncodedContent(queryParameters).ReadAsStringAsync().ConfigureAwait(false);
+            var fullUrl = $"{baseUrl}{endpoint}.ashx?{queryString}";
+
+            // Use HttpRequestMessage to send the request
+            using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, fullUrl))
+            {
+                return await _httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+            }
         }
 
         public static HttpClient Client => _httpClient;

@@ -130,7 +130,7 @@ namespace SocsFeeds
             return details;
         }
 
-        public static async Task<Response<ActivityRoot>> GetActivityAttendences(string acadTerm, string fullAcadYear)
+        public static async Task<Response<ActivityRoot>> GetActivityAttendences(string acadTerm, string fullAcadYear, string category = null)
         {
             try
             {
@@ -140,6 +140,9 @@ namespace SocsFeeds
                     {"academicYear", fullAcadYear}
                 };
 
+                if (!string.IsNullOrEmpty(category))
+                    extraParameters.Add("Category", $"LIKE:{category}");
+                
                 var response = await ApiClientProvider.GetApiResponseAsync("proactivityabsencereport", extraParameters);
 
                 if (response.IsSuccessStatusCode)
