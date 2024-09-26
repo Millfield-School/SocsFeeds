@@ -53,7 +53,7 @@ namespace SocsFeeds
                     LessonStartDate = DateOnly.FromDateTime(Convert.ToDateTime(node.Element("startdate")?.Value)),
                     LessonStartTime = node.Element("starttime")?.Value,
                     LessonEndTime = node.Element("endtime")?.Value,
-                    LessonType = node.Element("subject")?.Value,
+                    LessonType = node.Element("sport")?.Value,
                     LessonTitle = node.Element("title")?.Value,
                     Location = node.Element("location")?.Value,
                     LessonCostSchool = decimal.TryParse(node.Element("costschool")?.Value, out decimal costSchool) ? costSchool : 0,

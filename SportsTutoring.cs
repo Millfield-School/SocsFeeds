@@ -8,7 +8,7 @@ using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class AcademicTutoring 
+    public class SportsTutoring
     {
         public class Root
         {
@@ -21,7 +21,7 @@ namespace SocsFeeds
             {
                 var extraParameters = new Dictionary<string, string>
                 {
-                    {"data", "academictutoring"}
+                    {"data", "sportcoaching"}
                 };
 
                 if (lessonDate != DateTime.MinValue)
@@ -57,7 +57,7 @@ namespace SocsFeeds
                     LessonStartDate = DateOnly.ParseExact(node.Element("startdate")?.Value, "dd/MM/yyyy", CultureInfo.InvariantCulture),
                     LessonStartTime = node.Element("starttime")?.Value,
                     LessonEndTime = node.Element("endtime")?.Value,
-                    LessonType = node.Element("subject")?.Value!,
+                    LessonType = node.Element("sport")?.Value!,
                     LessonTitle = node.Element("title")?.Value!,
                     Location = node.Element("location")?.Value!,
                     LessonCostSchool = decimal.Parse(node.Element("costschool")?.Value ?? "0"),
@@ -70,9 +70,6 @@ namespace SocsFeeds
             }
             return tuitions;
         }
-
-
-
     }
 }
 
