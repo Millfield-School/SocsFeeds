@@ -1,14 +1,14 @@
-﻿using System;
+﻿using SocsFeeds.helpers;
+using SocsFeeds.objects;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using SocsFeeds.helpers;
-using SocsFeeds.objects;
 
 namespace SocsFeeds
 {
-    public class Events 
+    public class Events
     {
         public class AttendanceRoot
         {
@@ -25,36 +25,34 @@ namespace SocsFeeds
             public List<ActivityAttendence> ActivityAttences { get; set; } = new List<ActivityAttendence>();
         }
 
-        public static async Task<Response<AttendanceRoot>> GetEventAttendance(DateTime eventDatetime, DateTime endDateTime = default)
+        private static async Task<Response<Events.AttendanceRoot>> GetEventAttendanceFixed(DateTime startDate, DateTime endDate = default)
         {
             try
             {
                 var extraParameters = new Dictionary<string, string>
                 {
                     {"data", "registers"},
-                    {"startdate", eventDatetime.ToString("dd-MM-yyyy")}
+                    {"startdate", startDate.ToString("ddMMMyyyy")},
+                    {"enddate", endDate.ToString("ddMMMyyyy")},
                 };
 
-                if (endDateTime != DateTime.MinValue)
-                    extraParameters.Add("enddate", endDateTime.ToString("dd-MM-yyyy"));
-                
                 var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseXml = await response.Content.ReadAsStringAsync();
-                    var attendance = ParseAttendanceFromXml(responseXml);
-                    return Response<AttendanceRoot>.Success(new AttendanceRoot { Attendances = attendance });
+                    var attendances = ParseAttendanceFromXml(responseXml);
+                    return Response<Events.AttendanceRoot>.Success(new Events.AttendanceRoot { Attendances = attendances });
                 }
 
-                return Response<AttendanceRoot>.Error(response.ReasonPhrase);
+                return Response<Events.AttendanceRoot>.Error(response.ReasonPhrase);
             }
             catch (Exception e)
             {
-                return Response<AttendanceRoot>.Error($"Error retrieving Event Attendance data - {e.Message}");
+                return Response<Events.AttendanceRoot>.Error($"Error retrieving Event Attendance data - {e.Message}");
             }
         }
-        
+
         private static List<EventAttendance> ParseAttendanceFromXml(string xml)
         {
             var attendances = new List<EventAttendance>();
@@ -72,7 +70,7 @@ namespace SocsFeeds
             }
             return attendances;
         }
-       
+
         public static async Task<Response<DetailsRoot>> GetEventDetails(DateTime eventDatetime, DateTime endDateTime = default)
         {
             try
@@ -142,7 +140,7 @@ namespace SocsFeeds
 
                 if (!string.IsNullOrEmpty(category))
                     extraParameters.Add("Category", $"LIKE:{category}");
-                
+
                 var response = await ApiClientProvider.GetApiResponseAsync("proactivityabsencereport", extraParameters);
 
                 if (response.IsSuccessStatusCode)
@@ -177,7 +175,7 @@ namespace SocsFeeds
                     RecordedBy = node.Element("RecordedBy")?.Value,
                     tic = node.Element("MasterInCharge")?.Value,
                     excused = node.Element("Excused")?.Value switch
-                    { 
+                    {
                         "1" => true,
                         "0" => false,
                         _ => bool.TryParse(node.Element("Excused")?.Value, out bool excusedBool) ? excusedBool : (bool?)null,
@@ -191,6 +189,6 @@ namespace SocsFeeds
             }
             return attendances;
         }
-      
+
     }
 }
