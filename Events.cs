@@ -25,7 +25,7 @@ namespace SocsFeeds
             public List<ActivityAttendence> ActivityAttences { get; set; } = new List<ActivityAttendence>();
         }
 
-        private static async Task<Response<Events.AttendanceRoot>> GetEventAttendanceFixed(DateTime startDate, DateTime endDate = default)
+        public static async Task<Response<Events.AttendanceRoot>> GetEventAttendance(DateTime startDate, DateTime endDate = default)
         {
             try
             {
