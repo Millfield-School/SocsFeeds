@@ -25,33 +25,37 @@ namespace SocsFeeds
             public List<ActivityAttendence> ActivityAttences { get; set; } = new List<ActivityAttendence>();
         }
 
-        public static async Task<Response<Events.AttendanceRoot>> GetEventAttendance(DateTime startDate, DateTime endDate = default)
+        public static async Task<Response<AttendanceRoot>> GetEventAttendance(DateTime eventDatetime, DateTime endDateTime = default)
         {
             try
             {
                 var extraParameters = new Dictionary<string, string>
                 {
                     {"data", "registers"},
-                    {"startdate", startDate.ToString("ddMMMyyyy")},
-                    {"enddate", endDate.ToString("ddMMMyyyy")},
+                    {"startdate", eventDatetime.ToString("ddMMMyyyy")},
+                    {"enddate", endDateTime.ToString("ddMMMyyyy")},
                 };
+
+                if (endDateTime != DateTime.MinValue)
+                    extraParameters.Add("enddate", endDateTime.ToString("dd-MM-yyyy"));
 
                 var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseXml = await response.Content.ReadAsStringAsync();
-                    var attendances = ParseAttendanceFromXml(responseXml);
-                    return Response<Events.AttendanceRoot>.Success(new Events.AttendanceRoot { Attendances = attendances });
+                    var attendance = ParseAttendanceFromXml(responseXml);
+                    return Response<AttendanceRoot>.Success(new AttendanceRoot { Attendances = attendance });
                 }
 
-                return Response<Events.AttendanceRoot>.Error(response.ReasonPhrase);
+                return Response<AttendanceRoot>.Error(response.ReasonPhrase);
             }
             catch (Exception e)
             {
-                return Response<Events.AttendanceRoot>.Error($"Error retrieving Event Attendance data - {e.Message}");
+                return Response<AttendanceRoot>.Error($"Error retrieving Event Attendance data - {e.Message}");
             }
         }
+
 
         private static List<EventAttendance> ParseAttendanceFromXml(string xml)
         {
