@@ -36,9 +36,6 @@ namespace SocsFeeds
                     {"enddate", endDateTime.ToString("ddMMMyyyy")},
                 };
 
-                if (endDateTime != DateTime.MinValue)
-                    extraParameters.Add("enddate", endDateTime.ToString("dd-MM-yyyy"));
-
                 var response = await ApiClientProvider.GetApiResponseAsync("cocurricular", extraParameters);
 
                 if (response.IsSuccessStatusCode)
